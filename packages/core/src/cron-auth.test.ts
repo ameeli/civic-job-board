@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { isAuthorizedCronRequest } from "./cron-auth";
 
 describe("isAuthorizedCronRequest", () => {
-  const secret = "s3cret-value-1234";
+  const secret = "test-cron-secret";
 
   it("accepts the exact bearer header", () => {
     expect(isAuthorizedCronRequest(`Bearer ${secret}`, secret)).toBe(true);

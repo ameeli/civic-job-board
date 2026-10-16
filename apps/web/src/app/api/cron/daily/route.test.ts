@@ -7,7 +7,7 @@ vi.mock("@/lib/db", () => ({ getDb: () => "fake-db" }));
 
 import { GET } from "./route";
 
-const secret = "test-cron-secret-123";
+const secret = "test-cron-secret";
 
 function cronRequest(authorization?: string): Request {
   return new Request("http://localhost/api/cron/daily", {

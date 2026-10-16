@@ -1,0 +1,24 @@
+{
+  "name": "civic-job-board",
+  "private": true,
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @civic-job-board/web dev",
+    "build": "pnpm --filter @civic-job-board/web build",
+    "lint": "eslint .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:generate": "pnpm --filter @civic-job-board/db db:generate",
+    "db:migrate": "pnpm --filter @civic-job-board/db db:migrate"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.2",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.12"
+  }
+}

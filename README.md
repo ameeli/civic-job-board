@@ -61,7 +61,7 @@ the pnpm version pinned in `package.json`.
 
 ```sh
 pnpm install
-cp .env.example .env    # then fill in the values (see below)
+cp .env.example apps/web/.env.local    # then fill in the values (see below)
 ```
 
 Commands, all run from the repository root:
@@ -76,8 +76,9 @@ Commands, all run from the repository root:
 | `pnpm db:generate` | Generates a new SQL migration after editing `packages/db/src/schema.ts` |
 | `pnpm db:migrate` | Applies pending migrations to `DATABASE_URL` |
 
-`pnpm db:migrate` and the app read `DATABASE_URL` from the environment; export it
-in your shell (or prefix the command) when running them. Any Postgres works
+`pnpm dev` loads `apps/web/.env.local`; `pnpm db:migrate` does not read any
+`.env` file, so export `DATABASE_URL` in your shell (or prefix the command) when
+running it. Any Postgres works
 locally, for example:
 
 ```sh

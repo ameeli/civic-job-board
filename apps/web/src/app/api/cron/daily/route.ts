@@ -2,7 +2,7 @@ import { isAuthorizedCronRequest } from "@civic-job-board/core";
 import { recordSourceRun } from "@civic-job-board/db";
 import { getDb } from "@/lib/db";
 
-// Hobby plan maximum; see the README's "Daily check" section.
+// Hobby plan maximum; see the README's "The daily check" section.
 export const maxDuration = 300;
 
 /**

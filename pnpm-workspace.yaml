@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Both ship prebuilt platform binaries as optional dependencies, so their
+# install scripts are not needed.
+ignoredBuiltDependencies:
+  - esbuild
+  - unrs-resolver

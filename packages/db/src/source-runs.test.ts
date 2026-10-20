@@ -1,21 +1,13 @@
-import { fileURLToPath } from "node:url";
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
 import { beforeEach, describe, expect, it } from "vitest";
 import { sourceRuns } from "./schema";
 import { recordSourceRun, type Db } from "./source-runs";
-
-const migrationsFolder = fileURLToPath(new URL("../migrations", import.meta.url));
+import { createTestDb } from "./testing";
 
 describe("recordSourceRun", () => {
   let db: Db;
 
   beforeEach(async () => {
-    // Applies the real migrations to an in-memory Postgres.
-    const pglite = drizzle({ client: new PGlite() });
-    await migrate(pglite, { migrationsFolder });
-    db = pglite;
+    db = await createTestDb();
   });
 
   it("inserts a finished run and returns it with defaults filled in", async () => {

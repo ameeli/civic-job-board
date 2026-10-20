@@ -5,10 +5,12 @@ Unified inbox-style job board for civic tech and tech-for-good roles.
 A personal, single-user app that checks civic job boards and newsletters once a
 day and merges the jobs it finds into one email-style inbox.
 
-This repository is currently a **skeleton**: it deploys, runs a daily check that
-records itself in the database, and has CI. Job sources, AI calls, the inbox UI,
-and login are not built yet; screens and visual design are being prototyped
-separately.
+This repository is currently a **skeleton**: it deploys, has Google sign-in
+locked to the owner's account, runs a daily check that records itself in the
+database, and has CI. Job sources, AI calls, and the inbox UI are not built yet;
+screens and visual design are being prototyped separately.
+
+To put it online, follow [`docs/deploy.md`](docs/deploy.md).
 
 ## Stack and why
 
@@ -18,6 +20,7 @@ Hosting must cost **0 USD/month**, so every piece fits a free tier:
 | --- | --- | --- |
 | Web app, server functions, daily check | [Vercel](https://vercel.com) Hobby plan, Next.js App Router | Free; one platform runs the UI, the API routes, and the built-in [cron](https://vercel.com/docs/cron-jobs). |
 | Database | [Neon](https://neon.com) Free Postgres | Free serverless Postgres that pairs with Vercel. |
+| Sign-in | [Better Auth](https://www.better-auth.com) with Google | Free library; sessions live in the app's own Neon database. See [Login](#login). |
 | AI (later) | Google Gemini free tier | Free; free Google Search grounding is only available on Gemini 2.5 Flash / Flash-Lite. |
 | Email-only newsletters (later) | A dedicated Gmail account + Google Apps Script | Free; the script forwards new mail to the app. See [`apps-script/`](apps-script/README.md). |
 
@@ -27,7 +30,7 @@ used. GitHub Actions only runs CI.
 ### Repository layout
 
 ```
-apps/web/        Next.js app deployed to Vercel (placeholder home page, daily cron route)
+apps/web/        Next.js app deployed to Vercel (sign-in, placeholder home page, daily cron route)
 packages/core/   Runtime-agnostic shared code (no Node or browser APIs)
 packages/db/     Drizzle schema, SQL migrations, and database helpers
 apps-script/     Placeholder for the future Gmail forwarding script
@@ -76,6 +79,11 @@ Commands, all run from the repository root:
 | `pnpm db:generate` | Generates a new SQL migration after editing `packages/db/src/schema.ts` |
 | `pnpm db:migrate` | Applies pending migrations to `DATABASE_URL` |
 
+Signing in locally needs the Google client from
+[`docs/deploy.md`](docs/deploy.md#step-4-create-the-google-oauth-client), whose
+redirect URIs include `http://localhost:3000`, and
+`BETTER_AUTH_URL=http://localhost:3000`.
+
 `pnpm dev` loads `apps/web/.env.local`; `pnpm db:migrate` does not read any
 `.env` file, so export `DATABASE_URL` in your shell (or prefix the command) when
 running it. Any Postgres works
@@ -103,13 +111,20 @@ commit real values. Every `.env*` file except `.env.example` is gitignored.
 | --- | --- | --- |
 | `DATABASE_URL` | App, `db:migrate` | Postgres connection string. On Neon, use the pooled connection string. |
 | `CRON_SECRET` | Daily check | Random string of at least 16 characters. Vercel sends it as `Authorization: Bearer <CRON_SECRET>` on every cron request; the route rejects all requests when it is unset. |
+| `ALLOWED_EMAIL` | Sign-in | The one Google account that may sign in, compared case-insensitively. Nobody can sign in when it is unset. |
+| `BETTER_AUTH_SECRET` | Sign-in | Random string of at least 32 characters (`openssl rand -base64 32`) that signs session cookies. |
+| `BETTER_AUTH_URL` | Sign-in | The app's own address without a trailing slash, such as `http://localhost:3000` or `https://civic-job-board.vercel.app`. Google's redirect URI is this plus `/api/auth/callback/google`. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Sign-in | The Google OAuth client; see [`docs/deploy.md`](docs/deploy.md#step-4-create-the-google-oauth-client). |
 | `GEMINI_API_KEY` | Not used yet | Google Gemini API key for later AI features. |
 
-In production, set them in the Vercel project's environment variables.
+In production, set them in the Vercel project's environment variables
+([`docs/deploy.md`](docs/deploy.md#step-5-set-the-environment-variables-in-vercel)).
 
 ## Deploys
 
-Vercel deploys from GitHub:
+Vercel deploys from GitHub. [`docs/deploy.md`](docs/deploy.md) walks through the
+first deploy step by step (Neon project, migrations, Vercel project, Google
+client, environment variables, and checks). In short:
 
 - Create a Vercel project from this repository and set its **Root Directory**
   to `apps/web`. Vercel detects Next.js and the pnpm workspace and installs from
@@ -163,11 +178,49 @@ over several staggered daily cron jobs (up to 100 per project).
 
 ## Login
 
-Login is deliberately not implemented yet. It will mirror the setup of the
-author's existing Vercel + Neon project,
-[civic-lantern](https://github.com/ameeli/civic-lantern). This skeleton aligns
-with that project's web stack (Next.js 16 App Router, React 19,
-`eslint-config-next`, Vitest) so a later port is straightforward. civic-lantern's
-database layer is a Python backend (SQLAlchemy and Alembic), so its ORM is not
-reused here, and it has no end-user login library yet (its web app reaches its
-API with a server-only key), so no auth library is chosen here either.
+Only one person can sign in: the owner, with the Google account named in
+`ALLOWED_EMAIL`.
+
+- **Google only.** The sign-in page has one button. Email and password and
+  every other method are off.
+- **Allowlist.** When Google sends back any other account, or an address
+  Google has not verified, the sign-in is refused before anything is written:
+  no user, account, or session row is created, and the sign-in page explains
+  why. The address is checked again on every request, so changing
+  `ALLOWED_EMAIL` locks out an existing session at once.
+- **Protected by default.** [`apps/web/src/proxy.ts`](apps/web/src/proxy.ts)
+  runs before every route. Without an allowed session, pages redirect to
+  `/sign-in` and API routes answer `401`. Only `/sign-in`, Better Auth's own
+  routes under `/api/auth/`, and `/api/cron/daily` (which checks
+  `CRON_SECRET` itself) are public. Pages also check the session themselves.
+- **Per-user data.** The `users` table's `id` (a UUID) is what every per-user
+  table will reference: stars, read marks, pipeline stages, notes, and
+  reminders. Adding a second person later means allowing another address, not
+  changing tables.
+
+### Why Better Auth
+
+The login uses [Better Auth](https://www.better-auth.com) (`better-auth` 1.7)
+rather than [Auth.js](https://authjs.dev) v5:
+
+- Auth.js v5 (`next-auth@5`) is still a beta release, and since
+  [September 2025](https://www.better-auth.com/blog/authjs-joins-better-auth)
+  the Auth.js project is maintained by the Better Auth team, who recommend
+  Better Auth for new projects. Better Auth has stable releases, supports
+  Next.js 16, and is actively maintained.
+- It has a first-party Drizzle adapter, so its tables are ordinary Drizzle
+  tables in [`packages/db/src/schema.ts`](packages/db/src/schema.ts) with
+  migrations generated like any other.
+- Its database hooks can refuse a sign-in before the user row is written,
+  which is exactly the allowlist rule.
+
+Sessions are **database sessions**, Better Auth's default: the cookie holds a
+signed random token, and the session lives in the `sessions` table, so signing
+out deletes it for real. A signed copy of the session is also cached in a
+cookie for 5 minutes, so most requests skip the database. Sessions last 30
+days and are renewed while in use.
+
+civic-lantern was the intended template, but it has no end-user sign-in (its web
+app reaches its API with a server-only key), so this login is new work. The web
+stack still matches civic-lantern's (Next.js 16 App Router, React 19,
+`eslint-config-next`, Vitest).

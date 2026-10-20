@@ -1,0 +1,211 @@
+/* The "Commons" look: warm paper, Fraunces headings, Public Sans text, deep green accent. */
+:root {
+  color-scheme: light;
+  --paper: #f4efe5;
+  --surface: #fbf8f2;
+  --ink: #1f1d18;
+  --ink-muted: #5c574c;
+  --line: #ddd4c4;
+  --accent: #1f6a4e;
+  --accent-hover: #185640;
+  --accent-ink: #ffffff;
+  --danger-surface: #f8e6df;
+  --danger-line: #e6c2b5;
+  --danger-ink: #8a2f1b;
+  --font-heading: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-public-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 20px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.button-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.button-primary:hover {
+  background: var(--accent-hover);
+}
+
+.button-quiet {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.button-quiet:hover {
+  background: var(--surface);
+}
+
+/* Sign-in page */
+
+.sign-in {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 32px 16px;
+}
+
+.sign-in-card {
+  display: grid;
+  gap: 24px;
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgb(31 29 24 / 0.04), 0 8px 24px rgb(31 29 24 / 0.06);
+}
+
+.sign-in-card h1 {
+  font-size: 2rem;
+}
+
+.sign-in-intro {
+  display: grid;
+  gap: 8px;
+}
+
+.sign-in-intro p {
+  color: var(--ink-muted);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.sign-in-form .button {
+  width: 100%;
+}
+
+.sign-in-note {
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+
+.alert {
+  padding: 12px 14px;
+  background: var(--danger-surface);
+  border: 1px solid var(--danger-line);
+  border-radius: 8px;
+  color: var(--danger-ink);
+  font-size: 0.9375rem;
+}
+
+/* Signed-in home */
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.site-title {
+  font-size: 1.375rem;
+}
+
+.account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  min-width: 0;
+}
+
+.account-email {
+  min-width: 0;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+}
+
+.home {
+  display: grid;
+  gap: 8px;
+  padding: 48px 24px;
+}
+
+.home > * {
+  max-width: 60ch;
+}
+
+.home h2 {
+  font-size: 1.75rem;
+}
+
+.home p {
+  color: var(--ink-muted);
+}
+
+@media (max-width: 480px) {
+  .sign-in-card {
+    padding: 28px 20px;
+  }
+
+  .site-header,
+  .home {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .home {
+    padding-top: 32px;
+  }
+}

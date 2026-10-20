@@ -19,6 +19,6 @@ export type {
   SourceResult,
 } from "./jobs";
 export { orgNameKey } from "./orgs";
-export { trigramSimilarity } from "./similarity";
+export { sameLevel, trigramSimilarity } from "./similarity";
 export { SOURCES, SOURCE_HOST_DELAYS } from "./sources";
 export { employerDomain, linkKeys, normalizeUrl, parseAtsLink } from "./urls";

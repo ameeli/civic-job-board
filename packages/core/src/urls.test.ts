@@ -50,6 +50,24 @@ describe("linkKeys", () => {
     expect(board).toContain("ats:diversifytech:2463447");
   });
 
+  it("gives careers index pages and home pages no plain link key", () => {
+    for (const link of [
+      "https://org.org/careers",
+      "https://org.org/about/jobs/",
+      "https://www.org.org/join-us.html",
+      "https://org.org/",
+    ]) {
+      expect(linkKeys(link)).toEqual([]);
+    }
+    expect(linkKeys("https://org.org/careers/senior-product-manager")).toEqual([
+      "url:org.org/careers/senior-product-manager",
+    ]);
+  });
+
+  it("keeps the ATS key of a careers page that names one job", () => {
+    expect(linkKeys("https://org.org/careers?gh_jid=123")).toEqual(["ats:greenhouse:123"]);
+  });
+
   it("does not use JazzHR codes, which can repeat across jobs", () => {
     expect(linkKeys("https://analyticallc.applytojob.com/apply/VFbMwfkqm0/Data-Architect")).toEqual([
       "url:analyticallc.applytojob.com/apply/VFbMwfkqm0/Data-Architect",

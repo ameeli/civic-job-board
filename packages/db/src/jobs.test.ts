@@ -229,6 +229,89 @@ describe("ingestSourceResult", () => {
     expect(await db.select().from(jobs)).toHaveLength(3);
   });
 
+  it("keeps two levels apart when a newsletter and a feed share a careers page link", async () => {
+    await ingest(
+      db,
+      "diversify-tech-newsletter",
+      listing(
+        [
+          job({
+            externalId: "org.org/careers",
+            sourceUrl: "https://newsletter.diversifytech.com/p/diversify-tech-409",
+            applyUrl: "https://org.org/careers",
+            title: "Senior Product Manager",
+            orgName: "Org",
+            salary: null,
+            via: "around the web",
+          }),
+        ],
+        null,
+      ),
+      NOW,
+      true,
+    );
+    await ingest(
+      db,
+      "dscovery",
+      listing([
+        job({
+          externalId: "org.org/careers",
+          sourceUrl: "https://org.org/careers",
+          applyUrl: "https://org.org/careers",
+          title: "Product Manager",
+          orgName: "Org",
+          salary: null,
+        }),
+      ]),
+    );
+    expect(await db.select().from(jobs)).toHaveLength(2);
+  });
+
+  it("does not merge a shared posting link across different employers", async () => {
+    await ingest(db, "tech-jobs-for-good", listing([job({ applyUrl: "https://apply.example/posting/7", orgName: "Org A" })]));
+    await ingest(
+      db,
+      "dscovery",
+      listing([job({ externalId: "x", sourceUrl: "https://apply.example/posting/7", applyUrl: "https://apply.example/posting/7", orgName: "Org B" })]),
+    );
+    expect(await db.select().from(jobs)).toHaveLength(2);
+  });
+
+  it("merges a shared posting link at one employer", async () => {
+    await ingest(db, "tech-jobs-for-good", listing([job({ applyUrl: "https://org.org/careers/senior-software-engineer" })]));
+    await ingest(
+      db,
+      "dscovery",
+      listing([
+        job({
+          externalId: "org.org/careers/senior-software-engineer",
+          sourceUrl: "https://org.org/careers/senior-software-engineer",
+          applyUrl: "https://org.org/careers/senior-software-engineer?utm_source=dscovery",
+          title: "Sr. Software Engineer",
+          salary: null,
+        }),
+      ]),
+    );
+    expect(await db.select().from(jobs)).toHaveLength(1);
+  });
+
+  it("keeps two levels of one role at one employer apart", async () => {
+    await ingest(
+      db,
+      "tech-jobs-for-good",
+      listing([job({ applyUrl: "https://careers.example/a", title: "Software Engineer", salary: null })]),
+    );
+    await ingest(
+      db,
+      "civic-tech-field-guide",
+      listing(
+        [job({ externalId: "rec2", sourceUrl: "https://careers.example/b", applyUrl: "https://careers.example/b", title: "Software Engineer II", salary: null })],
+        null,
+      ),
+    );
+    expect(await db.select().from(jobs)).toHaveLength(2);
+  });
+
   it("finds the employer of an unnamed job by its ATS account", async () => {
     await ingest(db, "dscovery", listing([job({ orgName: "Raft", applyUrl: "https://job-boards.greenhouse.io/raft/jobs/1" })]));
     await ingest(

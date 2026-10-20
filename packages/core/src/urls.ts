@@ -131,17 +131,36 @@ export function parseAtsLink(raw: string | null | undefined): AtsLink | null {
 // JazzHR reuses one posting code for different jobs (seen on DSCovery in October 2026).
 const NON_UNIQUE_JOB_IDS = new Set(["jazzhr"]);
 
+// Last path segments of careers index pages, which list many jobs rather than one.
+const INDEX_PAGE_SEGMENTS = new Set([
+  "careers", "career", "jobs", "job", "join-us", "joinus", "join", "work-with-us",
+  "openings", "job-openings", "current-openings", "open-positions", "positions",
+  "opportunities", "job-opportunities", "employment", "vacancies", "hiring",
+]);
+
+/** Whether a link points at one posting, not a careers index or a home page. */
+function identifiesPosting(url: URL): boolean {
+  const last = url.pathname
+    .split("/")
+    .filter(Boolean)
+    .pop()
+    ?.toLowerCase()
+    .replace(/\.(html?|php|aspx?)$/, "");
+  return last !== undefined && !INDEX_PAGE_SEGMENTS.has(last);
+}
+
 /**
  * Keys that identify the job a link points at. Two links that share any key
- * are the same job. Includes the normalized URL and, for ATS links, an
- * identifier that is the same across the ATS's different link styles.
+ * are the same job. Includes the normalized URL when the link points at one
+ * posting and, for ATS links, an identifier that is the same across the
+ * ATS's different link styles.
  */
 export function linkKeys(raw: string | null | undefined): string[] {
-  const normalized = normalizeUrl(raw);
-  if (!normalized) {
+  const url = parseHttpUrl(raw);
+  if (!url) {
     return [];
   }
-  const keys = [`url:${normalized}`];
+  const keys = identifiesPosting(url) ? [`url:${normalizeUrl(raw)}`] : [];
   const ats = parseAtsLink(raw);
   if (ats && !NON_UNIQUE_JOB_IDS.has(ats.provider)) {
     // Greenhouse and job-board ids are unique on their own; the others are per account.

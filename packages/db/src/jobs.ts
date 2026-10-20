@@ -1,6 +1,7 @@
 import {
   SOURCES,
   linkKeys,
+  sameLevel,
   trigramSimilarity,
   type KnownJob,
   type NormalizedJob,
@@ -27,7 +28,7 @@ export const RECENT_FEED_GONE_DAYS = 30;
 export const PAGE_COPY_RETENTION_DAYS = 90;
 /** Two titles at one employer this similar (trigram similarity) can be the same job. */
 const SAME_TITLE_SIMILARITY = 0.7;
-/** A shared plain link (not an ATS id) only merges jobs whose titles are at least this similar. */
+/** A shared posting link (not an ATS id) only merges jobs at one employer whose titles are at least this similar. */
 const SHARED_LINK_TITLE_SIMILARITY = 0.4;
 
 const DAY_MS = 86_400_000;
@@ -171,9 +172,11 @@ async function createJob(
 
 /**
  * Finds the canonical job a new sighting duplicates, in order of certainty:
- * 1. A shared ATS job id, or a shared normalized link with a similar title.
+ * 1. A shared ATS job id, or a shared posting link with a similar title at
+ *    the same employer (when both employers are known).
  * 2. The same employer, a very similar title, and compatible pay and
  *    location, among its open or recently closed jobs.
+ * Titles at different levels ("Engineer" and "Engineer II") never match.
  * A job never absorbs a second sighting from the same source: one source
  * does not list one job twice.
  */
@@ -184,15 +187,24 @@ async function findDuplicateJob(
   const { source, keys, organizationId, data, now } = input;
   if (keys.length > 0) {
     const matches = await tx
-      .select({ jobId: jobSightings.jobId, linkKeys: jobSightings.linkKeys, title: jobs.title })
+      .select({
+        jobId: jobSightings.jobId,
+        linkKeys: jobSightings.linkKeys,
+        title: jobs.title,
+        organizationId: jobs.organizationId,
+      })
       .from(jobSightings)
       .innerJoin(jobs, eq(jobs.id, jobSightings.jobId))
       .where(arrayOverlaps(jobSightings.linkKeys, keys));
     for (const match of matches) {
       const shared = match.linkKeys.filter((key) => keys.includes(key));
       const byAtsId = shared.some((key) => key.startsWith("ats:"));
+      const byLink =
+        (organizationId === null || match.organizationId === null || match.organizationId === organizationId) &&
+        sameLevel(match.title, data.title) &&
+        trigramSimilarity(match.title, data.title) >= SHARED_LINK_TITLE_SIMILARITY;
       if (
-        (byAtsId || trigramSimilarity(match.title, data.title) >= SHARED_LINK_TITLE_SIMILARITY) &&
+        (byAtsId || byLink) &&
         !(await hasSightingFrom(tx, match.jobId, source))
       ) {
         return match.jobId;
@@ -217,6 +229,7 @@ async function findDuplicateJob(
     const similarity = trigramSimilarity(candidate.title, data.title);
     if (
       similarity >= SAME_TITLE_SIMILARITY &&
+      sameLevel(candidate.title, data.title) &&
       (!best || similarity > best.similarity) &&
       compatiblePay(candidate, data) &&
       compatibleLocation(candidate, data) &&

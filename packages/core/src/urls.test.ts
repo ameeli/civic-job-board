@@ -56,6 +56,13 @@ describe("linkKeys", () => {
       "https://org.org/about/jobs/",
       "https://www.org.org/join-us.html",
       "https://org.org/",
+      "https://org.org/careers/index.html",
+      "https://org.org/jobs/index.php",
+      "https://org.org/careers/default.aspx",
+      "https://org.org/en-us/careers/",
+      "https://org.org/careers/en",
+      "https://org.org/en",
+      "https://org.org/home.html",
     ]) {
       expect(linkKeys(link)).toEqual([]);
     }

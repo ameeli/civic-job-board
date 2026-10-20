@@ -138,14 +138,19 @@ const INDEX_PAGE_SEGMENTS = new Set([
   "opportunities", "job-opportunities", "employment", "vacancies", "hiring",
 ]);
 
+// Trailing segments that only pick a default document or a language: `index.html`, `en`, `en-us`.
+const DEFAULT_PAGE_SEGMENT = /^(index|default|home|[a-z]{2}(-[a-z]{2,4})?)$/;
+
 /** Whether a link points at one posting, not a careers index or a home page. */
 function identifiesPosting(url: URL): boolean {
-  const last = url.pathname
+  const segments = url.pathname
     .split("/")
     .filter(Boolean)
-    .pop()
-    ?.toLowerCase()
-    .replace(/\.(html?|php|aspx?)$/, "");
+    .map((segment) => segment.toLowerCase().replace(/\.[a-z0-9]+$/, ""));
+  while (segments.length > 0 && DEFAULT_PAGE_SEGMENT.test(segments[segments.length - 1]!)) {
+    segments.pop();
+  }
+  const last = segments.pop();
   return last !== undefined && !INDEX_PAGE_SEGMENTS.has(last);
 }
 

@@ -1,0 +1,678 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Tech Jobs for Good | Social Impact Tech Job Board</title>
+    <meta name="description"
+          content="Use Tech Jobs for Good to find tech jobs at mission driven companies and nonprofits working on pressing social and environmental issues.">
+    <meta itemprop="name" content="Tech Jobs for Good">
+    <meta itemprop="description"
+          content="Use Tech Jobs for Good to find tech jobs at mission driven companies and nonprofits working on presssing social and environmental issues.">
+    <meta itemprop="image" content="https://techjobsforgood.com/static/jobs/Tech_Jobs_for_Good_Logo_Light_RGB.png">
+    <meta property="og:url" content="https://techjobsforgood.com/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Tech Jobs for Good">
+    <meta property="og:description"
+          content="Use Tech Jobs for Good to find tech jobs at mission driven companies and nonprofits working on pressing social and environmental issues.">
+    <meta property="og:image" content="https://techjobsforgood.com/static/jobs/Tech_Jobs_for_Good_Logo_Light_RGB.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tech Jobs for Good">
+    <meta name="twitter:description"
+          content="Use Tech Jobs for Good to find tech jobs at mission driven companies and nonprofits working on pressing social and environmental issues.">
+    <meta name="twitter:image" content="https://techjobsforgood.com/static/jobs/Tech_Jobs_for_Good_Logo_Light_RGB.png">
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "url": "https://techjobsforgood.com/",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://techjobsforgood.com/jobs/?q={search_term_string}"
+                },
+            "query-input": "required name=search_term_string"
+          }
+        }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "url": "https://techjobsforgood.com",
+      "logo": "https://techjobsforgood.com/static/jobs/Tech_Jobs_for_Good_Logo_Light_RGB.png"
+    }
+    </script>
+</head>
+<body>
+<div class="ui secondary container menu">
+    <a href="/" class="ui item">
+        <img src="/static/jobs/Tech_Jobs_for_Good_Logo_Light_RGB.png" alt="Tech Jobs for Good Logo"
+             class="ui small image">
+    </a>
+        <div class="ui dropdown item" id="job-seeker-header-menu">
+            For Job Seekers
+            <i class="dropdown icon"></i>
+            <div class="menu">
+                <a href="/jobs/" class="item">Browse Jobs</a>
+                <a href="/companies/" class="item">Browse Organizations</a>
+                <a href="/accounts/signup/" class="item">Get Matched to Companies</a>
+                <a href="/impact-areas/" class="item">About our Impact Areas</a>
+            </div>
+        </div>
+        <div class="ui dropdown item" id="employer-header-menu">
+            For Employers
+            <i class="dropdown icon"></i>
+            <div class="menu">
+                <a href="/jobs/new/" class="item" id="click-post-job-menu">Post a Job</a>
+                <a href="/jobs/companies/create" class="item">Create Employer Profile</a>
+                <a href="/pricing/" class="item">Pricing</a>
+            </div>
+        </div>
+        <div class="ui dropdown item" id="community-header-menu">
+            Community
+            <i class="dropdown icon"></i>
+            <div class="menu">
+                <a href="/events/" class="item">Events</a>
+                <a href="/blog/" class="item">Blog</a>
+                <a href="https://subscribe.page/s/937d3fc580" class="item">Subscribe to Newsletter</a>
+            </div>
+        </div>
+    <div class="right menu">
+        <div class="item" id="login-header-menu">
+                <a href="/accounts/login">Log In</a>
+        </div>
+        <div class="item">
+                <a href="/pricing/" class="ui button" id="click-post-job-header">
+                    Post a Job
+                </a>
+        </div>
+        <div class="ui dropdown right icon item">
+            <i class="bars icon"></i>
+            <div class="menu">
+                    <div class="job-seeker-bars header">
+                        For Job Seekers
+                    </div>
+                    <a href="/" class="job-seeker-bars item">Find a Job</a>
+                    <a href="/companies/" class="job-seeker-bars item">Browse Organizations</a>
+                    <a href="/users/profile/edit/" class="job-seeker-bars item">Get Matched to Companies</a>
+                    <a href="/impact-areas/" class="job-seeker-bars item">About our Impact Areas</a>
+                    <div class="job-seeker-bars divider"></div>
+                    <div class="employer-bars header">
+                        For Employers
+                    </div>
+                    <a href="/jobs/new/" class="employer-bars item" id="click-post-job-burger-menu">Post a Job</a>
+                    <a href="/jobs/companies/create" class="employer-bars item">Create Employer Profile</a>
+                    <a href="/pricing/" class="employer-bars item">Pricing</a>
+                    <div class="employer-bars divider"></div>
+                <div class="community-bars header">
+                    Community
+                </div>
+                <a href="/events/" class="community-bars item">Events</a>
+                <a href="/blog/" class="community-bars item">Blog</a>
+                <div class="community-bars divider"></div>
+                <div class="header">
+                    Account
+                </div>
+                    <a href="/accounts/signup/" class="item">Create Account</a>
+                    <a href="/accounts/login/" class="item">Log In</a>
+            </div>
+        </div>
+    </div>
+</div>
+<div></div>
+    <div class="ui container">
+        <div class="ui segments">
+            <div class="ui segment">
+                <div class="ui header centered headerText">
+                    Tech Jobs for
+                    <div class="rotate-wrap">
+                        <div class="rotatingText">fighting climate change.</div>
+                        <div class="rotatingText">ending homelessness.</div>
+                        <div class="rotatingText">improving healthcare.</div>
+                        <div class="rotatingText">Good.</div>
+                    </div>
+                </div>
+                <br>
+                <form method="get" action="/jobs/">
+                    <div class="ui form">
+                        <div class="three fields">
+                            <div class="field">
+                                <label>Job Function</label>
+                                <select id="job_function" name="job_function" multiple=""
+                                        class="ui dropdown">
+                                    <option value="">Select Job Function</option>
+                                        <option 
+                                            value="Software Engineering">Software Engineering</option>
+                                        <option 
+                                            value="Data + Analytics">Data + Analytics</option>
+                                        <option 
+                                            value="Design + UX">Design + UX</option>
+                                        <option 
+                                            value="Product">Product</option>
+                                        <option 
+                                            value="Information Technology">Information Technology</option>
+                                        <option 
+                                            value="Hardware Engineering">Hardware Engineering</option>
+                                        <option 
+                                            value="Digital Marketing">Digital Marketing</option>
+                                        <option 
+                                            value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Location</label>
+                                <select name="locations" multiple="" class="ui fluid search dropdown">
+                                    <option value="">Select City or Remote</option>
+                                    <option value="remote" >Remote (US)
+                                    </option>
+                                        <option value="Alameda, CA"
+                                                >Alameda, CA</option>
+                                        <option value="Alexandria, VA"
+                                                >Alexandria, VA</option>
+                                        <option value="Aliso Viejo, CA"
+                                                >Aliso Viejo, CA</option>
+                                        <option value="Ann Arbor, MI"
+                                                >Ann Arbor, MI</option>
+                                        <option value="Arlington, VA"
+                                                >Arlington, VA</option>
+                                        <option value="Asbury Park, NJ"
+                                                >Asbury Park, NJ</option>
+                                        <option value="Atlanta, GA"
+                                                >Atlanta, GA</option>
+                                        <option value="Austin, TX"
+                                                >Austin, TX</option>
+                                        <option value="Bar Harbor, ME"
+                                                >Bar Harbor, ME</option>
+                                        <option value="Berkeley, CA"
+                                                >Berkeley, CA</option>
+                                        <option value="Bethesda, MD"
+                                                >Bethesda, MD</option>
+                                        <option value="Bloomington, MN"
+                                                >Bloomington, MN</option>
+                                        <option value="Boston, MA"
+                                                >Boston, MA</option>
+                                        <option value="Boulder, CO"
+                                                >Boulder, CO</option>
+                                        <option value="Brisbane, CA"
+                                                >Brisbane, CA</option>
+                                        <option value="Brooklyn Park, MN"
+                                                >Brooklyn Park, MN</option>
+                                        <option value="Brooklyn, NY"
+                                                >Brooklyn, NY</option>
+                                        <option value="Chicago, IL"
+                                                >Chicago, IL</option>
+                                        <option value="Cincinnati, OH"
+                                                >Cincinnati, OH</option>
+                                        <option value="Cleveland, OH"
+                                                >Cleveland, OH</option>
+                                        <option value="Columbus, OH"
+                                                >Columbus, OH</option>
+                                        <option value="Cortlandt Manor, NY"
+                                                >Cortlandt Manor, NY</option>
+                                        <option value="Dallas, TX"
+                                                >Dallas, TX</option>
+                                        <option value="Denver, CO"
+                                                >Denver, CO</option>
+                                        <option value="Detroit, MI"
+                                                >Detroit, MI</option>
+                                        <option value="Devens, MA"
+                                                >Devens, MA</option>
+                                        <option value="Dublin, OH"
+                                                >Dublin, OH</option>
+                                        <option value="Duquesne, PA"
+                                                >Duquesne, PA</option>
+                                        <option value="Durham, NC"
+                                                >Durham, NC</option>
+                                        <option value="Emeryville, CA"
+                                                >Emeryville, CA</option>
+                                        <option value="Fairfield, CT"
+                                                >Fairfield, CT</option>
+                                        <option value="Fort Lupton, CO"
+                                                >Fort Lupton, CO</option>
+                                        <option value="Fort Wayne, IN"
+                                                >Fort Wayne, IN</option>
+                                        <option value="Foster City, CA"
+                                                >Foster City, CA</option>
+                                        <option value="Freeland, MD"
+                                                >Freeland, MD</option>
+                                        <option value="Houston, TX"
+                                                >Houston, TX</option>
+                                        <option value="Irvine, CA"
+                                                >Irvine, CA</option>
+                                        <option value="Jacksonville, FL"
+                                                >Jacksonville, FL</option>
+                                        <option value="Lehi, UT"
+                                                >Lehi, UT</option>
+                                        <option value="Lexington, KY"
+                                                >Lexington, KY</option>
+                                        <option value="Lincoln, NE"
+                                                >Lincoln, NE</option>
+                                        <option value="London, UK"
+                                                >London, UK</option>
+                                        <option value="Long Island City, NY"
+                                                >Long Island City, NY</option>
+                                        <option value="Los Angeles, CA"
+                                                >Los Angeles, CA</option>
+                                        <option value="Madison, WI"
+                                                >Madison, WI</option>
+                                        <option value="Memphis, TN"
+                                                >Memphis, TN</option>
+                                        <option value="Milpitas, CA"
+                                                >Milpitas, CA</option>
+                                        <option value="Minneapolis, MN"
+                                                >Minneapolis, MN</option>
+                                        <option value="Mountain View, CA"
+                                                >Mountain View, CA</option>
+                                        <option value="New Orleans, LA"
+                                                >New Orleans, LA</option>
+                                        <option value="New York, NY"
+                                                >New York, NY</option>
+                                        <option value="Newark, NJ"
+                                                >Newark, NJ</option>
+                                        <option value="Norfolk, VA"
+                                                >Norfolk, VA</option>
+                                        <option value="Oakland, CA"
+                                                >Oakland, CA</option>
+                                        <option value="Omaha, NE"
+                                                >Omaha, NE</option>
+                                        <option value="Orange, CA"
+                                                >Orange, CA</option>
+                                        <option value="Palo Alto, CA"
+                                                >Palo Alto, CA</option>
+                                        <option value="Philadelphia, PA"
+                                                >Philadelphia, PA</option>
+                                        <option value="Placerville, CA"
+                                                >Placerville, CA</option>
+                                        <option value="Plano, TX"
+                                                >Plano, TX</option>
+                                        <option value="Playa Vista, CA"
+                                                >Playa Vista, CA</option>
+                                        <option value="Portland, OR"
+                                                >Portland, OR</option>
+                                        <option value="Princeton, NJ"
+                                                >Princeton, NJ</option>
+                                        <option value="Queens, NY"
+                                                >Queens, NY</option>
+                                        <option value="Rancho Cucamonga, CA"
+                                                >Rancho Cucamonga, CA</option>
+                                        <option value="Redwood City, CA"
+                                                >Redwood City, CA</option>
+                                        <option value="Reston, VA"
+                                                >Reston, VA</option>
+                                        <option value="Richmond, VA"
+                                                >Richmond, VA</option>
+                                        <option value="Rockville, MD"
+                                                >Rockville, MD</option>
+                                        <option value="Roseville, CA"
+                                                >Roseville, CA</option>
+                                        <option value="Sacramento, CA"
+                                                >Sacramento, CA</option>
+                                        <option value="Salt Lake City, UT"
+                                                >Salt Lake City, UT</option>
+                                        <option value="San Antonio, TX"
+                                                >San Antonio, TX</option>
+                                        <option value="San Bruno, CA"
+                                                >San Bruno, CA</option>
+                                        <option value="San Diego, CA"
+                                                >San Diego, CA</option>
+                                        <option value="San Francisco, CA"
+                                                >San Francisco, CA</option>
+                                        <option value="San Jose, CA"
+                                                >San Jose, CA</option>
+                                        <option value="San Mateo, CA"
+                                                >San Mateo, CA</option>
+                                        <option value="Sanford, FL"
+                                                >Sanford, FL</option>
+                                        <option value="Santa Clara, CA"
+                                                >Santa Clara, CA</option>
+                                        <option value="Seattle, WA"
+                                                >Seattle, WA</option>
+                                        <option value="Silver Spring, MD"
+                                                >Silver Spring, MD</option>
+                                        <option value="Somerville, MA"
+                                                >Somerville, MA</option>
+                                        <option value="South San Francisco, CA"
+                                                >South San Francisco, CA</option>
+                                        <option value="St. Louis, MO"
+                                                >St. Louis, MO</option>
+                                        <option value="Sunnyvale, CA"
+                                                >Sunnyvale, CA</option>
+                                        <option value="Tampa, FL"
+                                                >Tampa, FL</option>
+                                        <option value="Trenton, NJ"
+                                                >Trenton, NJ</option>
+                                        <option value="Vienna, VA"
+                                                >Vienna, VA</option>
+                                        <option value="Waltham, MA"
+                                                >Waltham, MA</option>
+                                        <option value="Washington, DC"
+                                                >Washington, DC</option>
+                                        <option value="West Palm Beach, FL"
+                                                >West Palm Beach, FL</option>
+                                        <option value="West Roseville, CA"
+                                                >West Roseville, CA</option>
+                                        <option value="Winooski, VT"
+                                                >Winooski, VT</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Impact Area</label>
+                                <select id="impact_areas" name="impact_areas" multiple="" class="ui dropdown">
+                                    <option value="">Select Impact Areas</option>
+                                        <option 
+                                                                                         value="Clean Energy">Clean Energy</option>
+                                        <option 
+                                                                                         value="Climate Change">Climate Change</option>
+                                        <option 
+                                                                                         value="Education">Education</option>
+                                        <option 
+                                                                                         value="Environment">Environment</option>
+                                        <option 
+                                                                                         value="Food &amp; Agriculture">Food &amp; Agriculture</option>
+                                        <option 
+                                                                                         value="Global Peace &amp; Safety">Global Peace &amp; Safety</option>
+                                        <option 
+                                                                                         value="Health &amp; Well-Being">Health &amp; Well-Being</option>
+                                        <option 
+                                                                                         value="Human Rights &amp; Equality">Human Rights &amp; Equality</option>
+                                        <option 
+                                                                                         value="Partners &amp; Advocates">Partners &amp; Advocates</option>
+                                        <option 
+                                                                                         value="Poverty Alleviation &amp; Economic Development">Poverty Alleviation &amp; Economic Development</option>
+                                        <option 
+                                                                                         value="Public Infrastructure">Public Infrastructure</option>
+                                        <option 
+                                                                                         value="Public Service &amp; Civic Engagement">Public Service &amp; Civic Engagement</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="ui left aligned field">
+                            <div class="ui left aligned accordion">
+                                <div class="left aligned title">
+                                    <i class="dropdown icon"></i>
+                                    Advanced Search
+                                </div>
+                                <div class="content">
+                                    <div class="three fields">
+                                        <div class="field">
+                                            <label>Keyword</label>
+                                            <div class="ui fluid icon input search">
+                                                <input id="q" name="q" type="text"
+                                                       placeholder="Search for a job title, company or skill.">
+                                            </div>
+                                        </div>
+                                        <div class="field">
+                                            <label>Seniority Level</label>
+                                            <select id="seniority" name="seniority" multiple="" class="ui dropdown">
+                                                <option value="">Select Seniority Level</option>
+                                                    <option 
+                                                        value="Entry Level">Entry Level</option>
+                                                    <option 
+                                                        value="Executive">Executive</option>
+                                                    <option 
+                                                        value="Intern">Intern</option>
+                                                    <option 
+                                                        value="Mid Level">Mid Level</option>
+                                                    <option 
+                                                        value="Senior">Senior</option>
+                                                    <option 
+                                                        value="None">None</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="ui toggle checkbox transition hidden">
+                                        <input type="checkbox" id="remote_jobs" name="remote_jobs"
+                                                >
+                                        <label>Remote Jobs Only</label>
+                                    </div>
+                                    <br><br>
+                                    <div class="ui toggle checkbox">
+                                        <input type="checkbox" name="has_salary" >
+                                        <label>Only Show Jobs with Salary Range</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <button id="search-jobs" class="ui center button submit">Search Jobs</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="ui grid">
+            <div class="sixteen wide column">
+                <div class="ui breadcrumb"
+                    >
+                    <div>
+                            Sort by: <strong>Relevance</strong> |
+                            <a href="/jobs/?page=1&sort_by=date#q" class="section">Date</a>
+                    </div>
+                    <div>
+                        <a href="/saved-jobs/" class="section">Saved Jobs</a>
+                        <div class="divider"> |</div>
+                        <a href="/my-applications/" class="section">My Applications</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="ui segment">
+                <div class="ui disabled basic button"
+                    >107 jobs found
+                </div>
+                    <span><i class="gem outline icon"
+                                                   ></i><u><a
+                            href="/upgrade-to-premium/"
+                           >Upgrade to see 789 additional jobs</a></u></span>
+                    <a class="ui white button" name="create-alert" id="save-search"
+                       href="/my-alerts/?add_search_term=&add_location=">
+                        <i class="bell outline icon"></i>
+                        Create Email Alert
+                    </a>
+                <div class="ui hidden divider"></div>
+                <div class="ui fluid grid container" id="jobList">
+                    <div class="sixteen wide centered column">
+                        <div class="ui raised fluid card job-card"
+                            >
+                <div class="content card-inner">
+                        <a class="content" href="/jobs/37063/?ref=homepage"
+                          >
+                    <div class="header job-title"
+                         title="Technology Consultant: Systems Integration Architecture"
+                        >
+                        Technology Consultant: Systems Integration Architecture
+                    </div>
+                    <div class="meta company-name"
+                         title="Element14"
+                        >
+                            <span class="company_name"
+                                 >Element14</span>
+                    </div>
+                    <div class="loc-and-sal" title="Remote (US) / Washington, DC (preferred)$135K - $160K"
+                        >
+                        <span class="location" title="Remote (US) / Washington, DC (preferred)">Remote (US) / Washington, DC (preferred)</span>
+                            -
+                            <span class="salary"
+                                  title="$135K - $160K">$135K - $160K</span>
+                    </div>
+                        <div class="extra content">
+                            <div class="ui violet label">Information Technology</div>
+                                    <div class="ui label"
+                                        >
+                                        Economic
+                                        Development
+                                    </div>
+                                    <div class="ui label"
+                                        >Public Service &amp; Civic Engagement</div>
+                                    <div class="ui label"
+                                        >Partners &amp; Advocates</div>
+                        </div>
+                    <br>
+                        <div class="description">
+                            <div class="content job-snippet"
+                                >
+                                Element14 is a public sector consulting firm helping federal and state agencies put product, data, and engineering to work in service of the mission. We are small, senior, and deliberately so - a place to work on hard problems alongside leaders who have sat on both sides of the table.
+                            </div>
+                            <p></p>
+                        </div>
+                    <div class="ui divider"></div>
+                    <div class="extra content">
+                        <span class="date-posted">Posted 5 hours ago</span>
+                    </div>
+                    </a>
+                    </a>
+                </div>
+<div class="card-actions">
+        <button id="37063"
+                class="ui button save job-card-save-button plausible-event-name=Save+Job"
+                onclick="location.href='/accounts/signup/?add_saved_job=37063';"
+               >
+            <i class="heart outline icon"></i>Save
+        </button>
+        <a href="/jobs/37063/?ref=homepage"
+           class="ui button job-card-view-button">
+            View Job
+        </a>
+</div>
+                </div>
+                </div>
+                    <div class="sixteen wide centered column">
+                        <div class="ui raised fluid card job-card"
+                            >
+                <div class="content card-inner">
+                        <a class="content" href="/jobs/37065/?ref=homepage"
+                          >
+                    <div class="header job-title"
+                         title="Engineering Manager"
+                        >
+                        Engineering Manager
+                    </div>
+                    <div class="meta company-name"
+                         title="First 5 Alameda County"
+                        >
+                            <span class="company_name"
+                                 >First 5 Alameda County</span>
+                    </div>
+                    <div class="loc-and-sal" title="Alameda, CA (Hybrid)$121K - $175K"
+                        >
+                        <span class="location" title="Alameda, CA (Hybrid)">Alameda, CA (Hybrid)</span>
+                            -
+                            <span class="salary"
+                                  title="$121K - $175K">$121K - $175K</span>
+                    </div>
+                        <div class="extra content">
+                            <div class="ui violet label">Software Engineering</div>
+                                    <div class="ui label"
+                                        >Education</div>
+                                    <div class="ui label"
+                                        >
+                                        Economic
+                                        Development
+                                    </div>
+                                    <div class="ui label"
+                                        >Partners &amp; Advocates</div>
+                        </div>
+                    <br>
+                        <div class="description">
+                            <div class="content job-snippet"
+                                >
+                                Together, we are moving from a patchwork system of services to an integrated system of care that gives all young children an opportunity to thrive.
+                            </div>
+                            <p></p>
+                        </div>
+                    <div class="ui divider"></div>
+                    <div class="extra content">
+                        <span class="date-posted">Posted 4 hours ago</span>
+                    </div>
+                    </a>
+                    </a>
+                </div>
+<div class="card-actions">
+        <button id="37065"
+                class="ui button save job-card-save-button plausible-event-name=Save+Job"
+                onclick="location.href='/accounts/signup/?add_saved_job=37065';"
+               >
+            <i class="heart outline icon"></i>Save
+        </button>
+        <a href="/jobs/37065/?ref=homepage"
+           class="ui button job-card-view-button">
+            View Job
+        </a>
+</div>
+                </div>
+                </div>
+                    <div class="sixteen wide centered column">
+                        <div class="ui raised fluid card job-card"
+                            >
+                <div class="content card-inner">
+                        <a class="content" href="/jobs/37062/?ref=homepage"
+                          >
+                    <div class="header job-title"
+                         title="Salesforce Manager"
+                        >
+                        Salesforce Manager
+                    </div>
+                    <div class="meta company-name"
+                         title="General Board of Global Ministries"
+                        >
+                            <span class="company_name"
+                                 >General Board of Global Ministries</span>
+                    </div>
+                    <div class="loc-and-sal" title="Remote$91K - $124K"
+                        >
+                        <span class="location" title="Remote">Remote</span>
+                            -
+                            <span class="salary"
+                                  title="$91K - $124K">$91K - $124K</span>
+                    </div>
+                        <div class="extra content">
+                            <div class="ui violet label">Information Technology</div>
+                                    <div class="ui label"
+                                        >Environment</div>
+                                    <div class="ui label"
+                                        >Food &amp; Agriculture</div>
+                                    <div class="ui label"
+                                        >Global Peace &amp; Safety</div>
+                                    <div class="ui label"
+                                        >Human Rights &amp; Equality</div>
+                                    <div class="ui label"
+                                        >Partners &amp; Advocates</div>
+                        </div>
+                    <br>
+                        <div class="description">
+                            <div class="content job-snippet"
+                                >
+                                Global Ministries is the international mission, humanitarian relief and development organization of The United Methodist Church. We connect people inside and outside the church to spread God’s love and Christ’s caring presence throughout the world.
+                            </div>
+                            <p></p>
+                        </div>
+                    <div class="ui divider"></div>
+                    <div class="extra content">
+                        <span class="date-posted">Posted 7 hours ago</span>
+                    </div>
+                    </a>
+                    </a>
+                </div>
+<div class="card-actions">
+        <button id="37062"
+                class="ui button save job-card-save-button plausible-event-name=Save+Job"
+                onclick="location.href='/accounts/signup/?add_saved_job=37062';"
+               >
+            <i class="heart outline icon"></i>Save
+        </button>
+        <a href="/jobs/37062/?ref=homepage"
+           class="ui button job-card-view-button">
+            View Job
+        </a>
+</div>
+                </div>
+                </div>
+                    <div class="sixteen wide centered column">
+                        </div></div></div></body>
+<footer>
+</footer>
+</html>

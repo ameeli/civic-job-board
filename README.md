@@ -5,10 +5,11 @@ Unified inbox-style job board for civic tech and tech-for-good roles.
 A personal, single-user app that checks civic job boards and newsletters once a
 day and merges the jobs it finds into one email-style inbox.
 
-This repository is currently a **skeleton**: it deploys, has Google sign-in
-locked to the owner's account, runs a daily check that records itself in the
-database, and has CI. Job sources, AI calls, and the inbox UI are not built yet;
-screens and visual design are being prototyped separately.
+So far it deploys, has Google sign-in locked to the owner's account, and runs
+a daily check that reads five job sources, merges duplicate jobs, and tags
+every new job with Gemini (see [The daily check](#the-daily-check)). The inbox
+UI is not built yet; screens and visual design are being prototyped
+separately.
 
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).
 
@@ -21,7 +22,7 @@ Hosting must cost **0 USD/month**, so every piece fits a free tier:
 | Web app, server functions, daily check | [Vercel](https://vercel.com) Hobby plan, Next.js App Router | Free; one platform runs the UI, the API routes, and the built-in [cron](https://vercel.com/docs/cron-jobs). |
 | Database | [Neon](https://neon.com) Free Postgres | Free serverless Postgres that pairs with Vercel. |
 | Sign-in | [Better Auth](https://www.better-auth.com) with Google | Free library; sessions live in the app's own Neon database. See [Login](#login). |
-| AI (later) | Google Gemini free tier | Free; free Google Search grounding is only available on Gemini 2.5 Flash / Flash-Lite. |
+| AI | Google Gemini free tier (`gemini-3.5-flash-lite`) | Free; tags each new job's role and sector and writes a one-line summary. See [AI tags](#ai-tags). |
 | Email-only newsletters (later) | A dedicated Gmail account + Google Apps Script | Free; the script forwards new mail to the app. See [`apps-script/`](apps-script/README.md). |
 
 Supabase, Cloudflare, Render, and GitHub Actions scheduling are deliberately not
@@ -30,9 +31,10 @@ used. GitHub Actions only runs CI.
 ### Repository layout
 
 ```
-apps/web/        Next.js app deployed to Vercel (sign-in, placeholder home page, daily cron route)
-packages/core/   Runtime-agnostic shared code (no Node or browser APIs)
-packages/db/     Drizzle schema, SQL migrations, and database helpers
+apps/web/        Next.js app deployed to Vercel (sign-in, placeholder home page, daily cron route,
+                 and the local daily-check script in scripts/)
+packages/core/   Runtime-agnostic shared code (no Node or browser APIs): source adapters, Gemini client
+packages/db/     Drizzle schema, SQL migrations, and database helpers (storing, merging, closing jobs)
 apps-script/     Placeholder for the future Gmail forwarding script
 ```
 
@@ -78,6 +80,7 @@ Commands, all run from the repository root:
 | `pnpm test` | Vitest unit tests in every package (no database needed) |
 | `pnpm db:generate` | Generates a new SQL migration after editing `packages/db/src/schema.ts` |
 | `pnpm db:migrate` | Applies pending migrations to `DATABASE_URL` |
+| `pnpm daily-check` | Runs the daily check once against `DATABASE_URL` (see below) |
 
 Signing in locally needs the Google client from
 [`docs/deploy.md`](docs/deploy.md#step-4-create-the-google-oauth-client), whose
@@ -95,8 +98,20 @@ export DATABASE_URL=postgres://postgres:pw@localhost:5432/postgres
 pnpm db:migrate
 ```
 
-To try the daily check locally (Vercel does not run crons in local dev), set
-`CRON_SECRET`, run the app, and call the route yourself:
+To run the daily check by hand (Vercel does not run crons in local dev), put
+`DATABASE_URL` and, for AI tags, `GEMINI_API_KEY` in `apps/web/.env.local`
+(or export them), then:
+
+```sh
+pnpm daily-check            # sources not checked in the last 20 hours, then AI tagging
+pnpm daily-check --force    # every source, even one already checked today
+```
+
+It has no time limit, so it finishes in one go (a first run on an empty
+database takes about seven minutes; later runs take seconds) and prints a
+summary. Without `GEMINI_API_KEY`, new jobs wait in the AI queue for a later
+run. To exercise the route the cron calls instead, set `CRON_SECRET`, run the
+app, and call it:
 
 ```sh
 curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/daily
@@ -115,7 +130,9 @@ commit real values. Every `.env*` file except `.env.example` is gitignored.
 | `BETTER_AUTH_SECRET` | Sign-in | Random string of at least 32 characters (`openssl rand -base64 32`) that signs session cookies. |
 | `BETTER_AUTH_URL` | Sign-in | The app's own address without a trailing slash, such as `http://localhost:3000` or `https://civic-job-board.vercel.app`. Google's redirect URI is this plus `/api/auth/callback/google`. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Sign-in | The Google OAuth client; see [`docs/deploy.md`](docs/deploy.md#step-4-create-the-google-oauth-client). |
-| `GEMINI_API_KEY` | Not used yet | Google Gemini API key for later AI features. |
+| `GEMINI_API_KEY` | Daily check | Google Gemini API key ([`docs/deploy.md`](docs/deploy.md#create-the-gemini-api-key)). When unset, the check still runs and new jobs wait untagged. |
+| `GEMINI_MODEL` | Daily check | Optional. Overrides the model, `gemini-3.5-flash-lite`. |
+| `GEMINI_REQUESTS_PER_MINUTE` | Daily check | Optional. Gemini requests per minute, default 10 (each tags up to 5 jobs). |
 
 In production, set them in the Vercel project's environment variables
 ([`docs/deploy.md`](docs/deploy.md#step-5-set-the-environment-variables-in-vercel)).
@@ -140,9 +157,115 @@ lint, typecheck, tests, and a build on every pull request and push to `main`.
 ## The daily check
 
 [`apps/web/vercel.json`](apps/web/vercel.json) schedules one cron job that calls
-`GET /api/cron/daily` once a day (`0 12 * * *`, in UTC). The route checks the
-`CRON_SECRET` bearer header, writes one row to the `source_runs` health table,
-and returns. Later, this run will poll every source and call Gemini.
+`GET /api/cron/daily` once a day at `0 13 * * *` UTC: 6 am Pacific in summer
+(PDT) and 5 am in winter (PST). The route checks the `CRON_SECRET` bearer
+header and runs the check
+([`apps/web/src/lib/daily-check.ts`](apps/web/src/lib/daily-check.ts)):
+
+1. **Poll every source** that has not finished a check in the last 20 hours,
+   and record one `source_runs` row per source: `ok`, `seen` (jobs the source
+   lists now), `new` (jobs it had not listed before), `error`, and `partial`.
+   The inbox banner (a later step) names each source whose latest row failed
+   or saw nothing.
+2. **Store** each job as a sighting and merge duplicates into one canonical
+   job (see [Duplicates](#duplicates)).
+3. **Close and reopen** jobs (see [Closing jobs](#closing-jobs)), and delete
+   page copies of jobs closed more than 90 days ago.
+4. **Tag** queued jobs with Gemini (see [AI tags](#ai-tags)).
+
+The check is safe if Vercel misses a day or delivers it twice: a lease in
+`run_leases` keeps two runs from overlapping, sources already checked in the
+last 20 hours are skipped, storing a check twice changes nothing, and every
+source is read in a way that catches up on missed days.
+
+### Sources
+
+Each source has an adapter in
+[`packages/core/src/sources/`](packages/core/src/sources/) that turns it into
+one job shape: title, employer and its website, location, remote/hybrid/on
+site, pay (with unit sanity checks), description, apply link, source link,
+the source's own id, posted and closing dates, and the source's own category
+tags. Adapters are tested against saved copies of each source in
+`packages/core/src/sources/fixtures/`. Every endpoint was checked live on
+2026-10-20.
+
+| Source | What is read |
+| --- | --- |
+| Tech Jobs for Gov | The WordPress REST API (`civicworkstudio.com/wp-json/wp/v2/job-listings`). Each check lists every open job's id and last-modified time, fetches full records only for new or changed jobs, and fetches those jobs' pages for the apply link, which the API lacks. |
+| Tech Jobs for Good | Free listings only, never premium-only jobs. The public listing (`/jobs/?page=N`, about 100 jobs) decides which jobs to take, and each new one's page is read once. The sitemap lists every open job, free or premium, and only tells when a job closes (a free job that moves behind the paywall is still open). The RSS feed has only the five newest jobs, all on the free listing, so it is not read. |
+| Diversify Tech (board) | The job sitemap, then each new job's page (its JSON-LD plus the job record the page embeds), at most one request a second as its robots.txt asks. |
+| Diversify Tech (newsletter) | Its public beehiiv RSS feed. Each issue's JOBS section is split into one job per line, labelled `job board` or `around the web`. |
+| DSCovery | Its RSS feed (`dscovery.fly.dev/feed/jobs`) has only the 50 newest jobs, so the home page's full job table is read too, for every open job with its employer, practice area, and location. Each new job's application page is read once for its description. |
+| Civic Tech Field Guide | Its jobs RSS feed, the 100 newest jobs. The feed has no employer field, so the employer comes from each job's application page (schema.org `JobPosting`), else a title such as "Data Scientist at Candid", else the employer's ATS account, else the AI step. Field Guide data is licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and must be credited wherever it is shown (`attribution` on the adapter). |
+| Field Guide Friday (newsletter) | Its public Mailchimp archive RSS feed: each issue's "Open Jobs" section, one job per paragraph. |
+
+Newsletters are read three weeks back on every check, so a missed day loses
+nothing. Pages fetched for a new job are kept in `page_copies`, with scripts
+and styles removed.
+
+### Duplicates
+
+A new sighting joins an existing job, in order of certainty, when it has:
+
+1. the same ATS job id (Greenhouse, Lever, Ashby, Workday, and others,
+   whatever the link style) or board job id, or the same normalized link and
+   a similar title; or
+2. the same employer, a very similar title (trigram similarity of at least
+   0.7, computed like Postgres `pg_trgm`), and compatible pay and remote
+   type.
+
+A job never takes a second sighting from the same source. Each field of the
+merged job comes from the first source that has it, in the order of
+`SOURCES` in
+[`packages/core/src/sources/index.ts`](packages/core/src/sources/index.ts).
+Employers (`organizations`) are matched by normalized name. A job with no
+employer name is matched by its ATS account, but only when exactly one known
+employer uses that account, because many government agencies share one.
+
+### Closing jobs
+
+Jobs, and everything attached to them, are kept forever; closing only sets
+`status` to `closed` and `closed_at`. A job closes when:
+
+- its application deadline day has passed, or
+- every source that listed it has dropped it: a source with a full listing
+  after missing it on 3 daily checks; a feed or newsletter, which only shows
+  recent jobs, after 30 days without it.
+
+A closed job that a source lists again, with no passed deadline, reopens. A
+full listing that comes back empty is treated as a broken source, not as
+every job closing.
+
+### AI tags
+
+New jobs go into the `ai_queue` table. After the sources, the check sends
+them to Gemini in batches of five, at most 10 requests a minute, and stores
+for each job one function tag, one to three sector tags, a seniority, and a
+one-line summary, from the taxonomy in
+[`packages/core/src/ai/taxonomy.ts`](packages/core/src/ai/taxonomy.ts). AI
+tags (`origin = 'ai'`, with the model's confidence) sit alongside the
+sources' own tags (`origin = 'board'`) in `job_tags`. When no source named
+the employer, the one the model reads from the posting is linked.
+
+Only public job-posting text is sent: title, employer, location, the board's
+categories, and the first 1,500 characters of the description. Nothing about
+the owner ever is. Requests set `store: false`, so Google does not keep them
+for later conversation turns.
+
+The model is `gemini-3.5-flash-lite`, checked against Google's docs on
+2026-10-20: a stable model, free of charge on the free tier, and the one
+Google suggests for high-volume simple data processing
+([models](https://ai.google.dev/gemini-api/docs/models),
+[pricing](https://ai.google.dev/gemini-api/docs/pricing)). Google no longer
+lists free-tier limits in its docs; they are set per project and shown in
+[AI Studio](https://aistudio.google.com), as requests per minute, tokens per
+minute, and requests per day, which reset at midnight Pacific time
+([rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)). Ten
+requests a minute stays well under them. If Gemini answers 429 (limit
+reached), the check stops tagging and the rest waits for the next run; a job
+the model fails to tag is retried after 1, 2, 4, ... hours, at most a day.
+
+### Vercel limits and chained runs
 
 Vercel Hobby plan limits that the daily run must fit in, as documented on
 2026-10-16:
@@ -150,8 +273,8 @@ Vercel Hobby plan limits that the daily run must fit in, as documented on
 - **Cron frequency:** at most once per day per cron job; a more frequent
   expression fails the deployment. Up to 100 cron jobs per project.
   ([Usage & Pricing for Cron Jobs](https://vercel.com/docs/cron-jobs/usage-and-pricing))
-- **Timing:** precise only to the hour. `0 12 * * *` may run any time between
-  12:00 and 12:59 UTC. ([same page](https://vercel.com/docs/cron-jobs/usage-and-pricing))
+- **Timing:** precise only to the hour. `0 13 * * *` may run any time between
+  13:00 and 13:59 UTC. ([same page](https://vercel.com/docs/cron-jobs/usage-and-pricing))
 - **Maximum function duration:** 300 seconds (5 minutes), which is both the
   default and the maximum on Hobby, so a cron invocation gets at most 300 s.
   ([Vercel Functions Limits](https://vercel.com/docs/functions/limitations#max-duration);
@@ -167,14 +290,15 @@ Vercel Hobby plan limits that the daily run must fit in, as documented on
   time spent waiting on I/O (for example, AI calls) does not count as active
   CPU. ([Vercel Hobby Plan](https://vercel.com/docs/plans/hobby))
 
-**If the work outgrows one 300-second run:** Vercel's documented approach is to
-split it into separate units or to combine the cron job with regular HTTP
-requests to the app's own API
+**When the work outgrows one 300-second run** (a first run on an empty
+database takes about seven minutes), the run chains to itself, combining the
+cron job with requests to the app's own API as Vercel suggests for long work
 ([Managing Cron Jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-job-duration)).
-So a run can chain to itself: before its time runs out, it makes an
-authenticated HTTP request to its own route to continue where it stopped, and
-each request gets a fresh 300-second limit. Alternatively, sources can be spread
-over several staggered daily cron jobs (up to 100 per project).
+It stops starting new work after 270 seconds, then calls its own route with
+`?chain=1` and the same `CRON_SECRET`. A chained call answers `202` at once
+and works after responding (Next.js `after()`) with a fresh 300-second limit,
+continuing where the last run stopped. A chain ends after 10 follow-up runs;
+anything left waits for the next day.
 
 ## Login
 

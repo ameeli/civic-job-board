@@ -175,6 +175,10 @@ add other scopes under **Data Access**. Google still lets any account reach the
 app's callback; the app itself turns away every account except
 `ALLOWED_EMAIL`.
 
+Optional safeguard: open [Audience](https://console.cloud.google.com/auth/audience),
+click **Add users** under **Test users**, and add your Gmail address. Your
+sign-in then works even if Google ever starts asking for the test user list.
+
 ### Create the client
 
 ([Google: Manage OAuth clients](https://support.google.com/cloud/answer/15549257))
@@ -258,6 +262,7 @@ If something goes wrong:
 | What you see | What to check |
 | --- | --- |
 | Google says `Error 400: redirect_uri_mismatch` | The redirect URI in step 4 matches `BETTER_AUTH_URL` + `/api/auth/callback/google` exactly. |
+| Google says "Access blocked" or that the app "has not completed the Google verification process" | Add your Gmail address under **Audience** > **Test users** in the Google Auth Platform (the optional safeguard in step 4), then try again. |
 | "That Google account is not allowed to sign in." for your own account | The spelling of `ALLOWED_EMAIL`. Redeploy after changing it. |
 | An error page instead of the sign-in page | Every variable in step 5 is set for Production, and you redeployed afterwards. The project's **Logs** page shows the error. |
 | "Sign-in did not finish." | Try again in a fresh private window; if it repeats, check **Logs**. |

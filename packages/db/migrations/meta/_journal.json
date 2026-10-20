@@ -8,6 +8,13 @@
       "when": 1792193584508,
       "tag": "0000_source_runs",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792522810118,
+      "tag": "0001_users_and_auth",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,14 @@
 export { createDb } from "./client";
-export { sourceRuns, type NewSourceRun, type SourceRun } from "./schema";
+export {
+  accounts,
+  authSchema,
+  sessions,
+  sourceRuns,
+  users,
+  verifications,
+  type NewSourceRun,
+  type SourceRun,
+  type User,
+} from "./schema";
 export { recordSourceRun, type Db } from "./source-runs";
+export { findUserById } from "./users";

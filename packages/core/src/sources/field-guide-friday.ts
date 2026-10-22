@@ -4,7 +4,7 @@ import type { NormalizedJob, SourceAdapter } from "../jobs";
 import { parseRemoteType } from "../location";
 import { parseSalaryText } from "../salary";
 import { cleanText } from "../text";
-import { normalizeUrl } from "../urls";
+import { linkExternalId } from "../urls";
 import { FIELD_GUIDE_ATTRIBUTION } from "./civic-tech-field-guide";
 import { NEWSLETTER_WINDOW_DAYS } from "./shared";
 
@@ -21,8 +21,8 @@ const FEED_URL =
  *     $min - $max | Location | Apply by MM-DD-YYYY
  *
  * Every check reads the issues of the last few weeks, so a missed day loses
- * nothing; a job is keyed by its apply link, so it is the same job in every
- * issue that repeats it.
+ * nothing; a job is keyed by its apply link (plus its title when the link is a
+ * shared careers page), so it is the same job in every issue that repeats it.
  */
 export const fieldGuideFriday: SourceAdapter = {
   id: "field-guide-friday",
@@ -77,7 +77,7 @@ function parseJobParagraph(
   const link = paragraph.querySelector("a");
   const applyUrl = link?.getAttribute("href")?.trim();
   const title = cleanText(link?.text);
-  const externalId = normalizeUrl(applyUrl);
+  const externalId = title ? linkExternalId(applyUrl, title) : null;
   if (!link || !applyUrl || !title || !externalId) {
     return null;
   }

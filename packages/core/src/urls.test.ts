@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { employerDomain, linkKeys, normalizeUrl, parseAtsLink } from "./urls";
+import { employerDomain, identifiesPosting, linkExternalId, linkKeys, normalizeUrl, parseAtsLink } from "./urls";
 
 describe("normalizeUrl", () => {
   it("drops www, tracking parameters, fragments, and trailing slashes", () => {
@@ -50,8 +50,16 @@ describe("linkKeys", () => {
     expect(board).toContain("ats:diversifytech:2463447");
   });
 
-  it("gives careers index pages and home pages no plain link key", () => {
+  it("gives careers index, home, login, and search pages no plain link key", () => {
     for (const link of [
+      "https://careers.northwestern.edu/psc/hrnu_er/?cmd=login&errorPg=ckreq&languageCd=ENG",
+      "https://org.org/join-our-team",
+      "https://org.org/open-roles",
+      "https://org.org/careers-at-org",
+      "https://org.org/work-here",
+      "https://org.org/get-involved",
+      "https://www.governmentjobs.com/careers/phoenix",
+      "https://org.org/careers/search?q=data-analyst",
       "https://org.org/careers",
       "https://org.org/about/jobs/",
       "https://www.org.org/join-us.html",
@@ -71,14 +79,43 @@ describe("linkKeys", () => {
     ]);
   });
 
+  it("keys links that carry a job id", () => {
+    expect(linkKeys("https://org.org/careers/4567")).toEqual(["url:org.org/careers/4567"]);
+    expect(linkKeys("https://org.org/jobs?id=8821&utm_source=x")).toEqual(["url:org.org/jobs?id=8821"]);
+    expect(linkKeys("https://org.org/en/careers/a1b2c3d4e5")).toEqual(["url:org.org/en/careers/a1b2c3d4e5"]);
+  });
+
   it("keeps the ATS key of a careers page that names one job", () => {
-    expect(linkKeys("https://org.org/careers?gh_jid=123")).toEqual(["ats:greenhouse:123"]);
+    expect(linkKeys("https://org.org/careers?gh_jid=123")).toEqual([
+      "url:org.org/careers?gh_jid=123",
+      "ats:greenhouse:123",
+    ]);
   });
 
   it("does not use JazzHR codes, which can repeat across jobs", () => {
     expect(linkKeys("https://analyticallc.applytojob.com/apply/VFbMwfkqm0/Data-Architect")).toEqual([
       "url:analyticallc.applytojob.com/apply/VFbMwfkqm0/Data-Architect",
     ]);
+  });
+});
+
+describe("identifiesPosting", () => {
+  it("accepts ATS links even without a title slug", () => {
+    expect(identifiesPosting("https://jobs.lever.co/schmidt-entities/abc")).toBe(true);
+    expect(identifiesPosting("not a url")).toBe(false);
+  });
+});
+
+describe("linkExternalId", () => {
+  it("is the normalized link for a link to one posting", () => {
+    expect(linkExternalId("https://data.org/jobs/program-officer/?utm_source=x", "Program Officer")).toBe(
+      "data.org/jobs/program-officer",
+    );
+  });
+
+  it("adds the title for a shared careers page", () => {
+    expect(linkExternalId("https://org.org/careers/", "Data  Analyst")).toBe("org.org/careers#data analyst");
+    expect(linkExternalId("mailto:jobs@org.org", "Data Analyst")).toBeNull();
   });
 });
 

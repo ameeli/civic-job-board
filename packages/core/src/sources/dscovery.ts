@@ -3,7 +3,7 @@ import { parseRss } from "../feeds";
 import type { NormalizedJob, SourceAdapter } from "../jobs";
 import { parseRemoteType } from "../location";
 import { cleanText } from "../text";
-import { normalizeUrl } from "../urls";
+import { linkExternalId } from "../urls";
 import { pastDeadline, withApplyPage } from "./shared";
 
 const ORIGIN = "https://dscovery.fly.dev";
@@ -16,8 +16,8 @@ const ORIGIN = "https://dscovery.fly.dev";
  * "Employer: Title" plus the application link. Its home page lists every
  * open job in a table with the employer, the firm's practice area, and
  * location, so the table is the full listing (and tells when a job closes)
- * and the feed is merged in. A job is keyed by its application link, the one
- * id both share. Each new job's application page is fetched once for its
+ * and the feed is merged in. A job is keyed by its application link (plus its
+ * title when the link is a shared careers page), the one id both share. Each new job's application page is fetched once for its
  * description.
  */
 export const dscovery: SourceAdapter = {
@@ -33,8 +33,8 @@ export const dscovery: SourceAdapter = {
       listing.set(job.externalId, job);
     }
     for (const item of parseRss(feed.body)) {
-      const externalId = normalizeUrl(item.link);
       const [orgName, title] = splitFeedTitle(item.title ?? "");
+      const externalId = title ? linkExternalId(item.link, title) : null;
       if (externalId && title && !listing.has(externalId)) {
         listing.set(externalId, emptyJob(externalId, item.link!, title, orgName));
       }
@@ -65,8 +65,8 @@ export function parseHomeTable(html: string, now: Date): NormalizedJob[] {
     const cells = row.querySelectorAll("td");
     const link = row.querySelector("td.job-link a");
     const href = link?.getAttribute("href")?.trim();
-    const externalId = normalizeUrl(href);
     const title = cleanText(link?.text);
+    const externalId = title ? linkExternalId(href, title) : null;
     if (!href || !externalId || !title || cells.length < 5) {
       continue;
     }

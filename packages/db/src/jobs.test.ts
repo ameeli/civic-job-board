@@ -268,11 +268,11 @@ describe("ingestSourceResult", () => {
   });
 
   it("does not merge a shared posting link across different employers", async () => {
-    await ingest(db, "tech-jobs-for-good", listing([job({ applyUrl: "https://apply.example/posting/7", orgName: "Org A" })]));
+    await ingest(db, "tech-jobs-for-good", listing([job({ applyUrl: "https://apply.example/posting/7001", orgName: "Org A" })]));
     await ingest(
       db,
       "dscovery",
-      listing([job({ externalId: "x", sourceUrl: "https://apply.example/posting/7", applyUrl: "https://apply.example/posting/7", orgName: "Org B" })]),
+      listing([job({ externalId: "x", sourceUrl: "https://apply.example/posting/7001", applyUrl: "https://apply.example/posting/7001", orgName: "Org B" })]),
     );
     expect(await db.select().from(jobs)).toHaveLength(2);
   });

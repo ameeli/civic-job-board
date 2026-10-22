@@ -4,7 +4,7 @@ import type { NormalizedJob, SourceAdapter } from "../jobs";
 import { parseRemoteType } from "../location";
 import { parseSalaryText } from "../salary";
 import { cleanText } from "../text";
-import { normalizeUrl } from "../urls";
+import { linkExternalId } from "../urls";
 import { NEWSLETTER_WINDOW_DAYS } from "./shared";
 
 // The newsletter's public beehiiv RSS feed, with each issue's full HTML.
@@ -22,8 +22,8 @@ export const AROUND_THE_WEB = "around the web";
  * with the list it came from.
  *
  * Every check reads the issues of the last few weeks, so a missed day loses
- * nothing; a job is keyed by its link, so a repeat in a later issue is the
- * same job.
+ * nothing; a job is keyed by its link (plus its title when the link is a shared
+ * careers page), so a repeat in a later issue is the same job.
  */
 export const diversifyTechNewsletter: SourceAdapter = {
   id: "diversify-tech-newsletter",
@@ -101,7 +101,7 @@ function parseJobLine(
 ): NormalizedJob | null {
   const href = link.getAttribute("href")?.trim();
   const title = cleanText(link.text);
-  const externalId = normalizeUrl(href);
+  const externalId = title ? linkExternalId(href, title) : null;
   if (!href || !title || !externalId) {
     return null;
   }

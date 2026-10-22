@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { fakeHttp, testContext } from "./fake-http";
-import { fieldGuideFriday } from "./field-guide-friday";
+import { fieldGuideFriday, parseIssue } from "./field-guide-friday";
 
 const FEED =
   "https://us19.campaign-archive.com/feed?u=cdb853c4847acff0d0a09460d&id=ca5a70438b";
@@ -40,5 +40,26 @@ describe("Field Guide Friday", () => {
       orgName: "Demos",
       salary: { min: 52973, max: 69273, currency: "GBP", period: "year" },
     });
+  });
+
+  it("keeps two titles on one careers page apart but merges a repeated posting link", () => {
+    const paragraph = (href: string, title: string) =>
+      `<p>💼 <a href="${href}">${title}</a>, Northwestern University<br/>Hybrid (Evanston, IL)</p>`;
+    const login = "https://careers.northwestern.edu/psc/hrnu_er/?cmd=login&errorPg=ckreq&languageCd=ENG";
+    const posting = "https://data.org/jobs/program-officer/";
+    const jobs = parseIssue(
+      `<h1>Open Jobs</h1>${paragraph(login, "Program Coordinator")}${paragraph(login, "Data Analyst")}${paragraph(posting, "Program Officer")}`,
+      "https://us19.campaign-archive.com/?u=1&id=2",
+      null,
+    );
+
+    expect(jobs.map((job) => job.externalId)).toEqual([
+      "careers.northwestern.edu/psc/hrnu_er?cmd=login&errorPg=ckreq&languageCd=ENG#program coordinator",
+      "careers.northwestern.edu/psc/hrnu_er?cmd=login&errorPg=ckreq&languageCd=ENG#data analyst",
+      "data.org/jobs/program-officer",
+    ]);
+    expect(parseIssue(`<h1>Open Jobs</h1>${paragraph(`${posting}?utm_source=x`, "Program Officer (AI)")}`, "x", null)[0]!.externalId).toBe(
+      jobs[2]!.externalId,
+    );
   });
 });

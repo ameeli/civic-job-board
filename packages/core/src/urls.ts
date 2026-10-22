@@ -131,27 +131,81 @@ export function parseAtsLink(raw: string | null | undefined): AtsLink | null {
 // JazzHR reuses one posting code for different jobs (seen on DSCovery in October 2026).
 const NON_UNIQUE_JOB_IDS = new Set(["jazzhr"]);
 
-// Last path segments of careers index pages, which list many jobs rather than one.
-const INDEX_PAGE_SEGMENTS = new Set([
-  "careers", "career", "jobs", "job", "join-us", "joinus", "join", "work-with-us",
-  "openings", "job-openings", "current-openings", "open-positions", "positions",
-  "opportunities", "job-opportunities", "employment", "vacancies", "hiring",
-]);
-
 // Trailing segments that only pick a default document or a language: `index.html`, `en`, `en-us`.
 const DEFAULT_PAGE_SEGMENT = /^(index|default|home|[a-z]{2}(-[a-z]{2,4})?)$/;
 
-/** Whether a link points at one posting, not a careers index or a home page. */
-function identifiesPosting(url: URL): boolean {
+// Path segments and query parameters of login and search pages, which never name one job.
+const LOGIN_OR_SEARCH_SEGMENT = /^(log-?in|sign-?in|search|results)$/;
+const SEARCH_PARAMS = new Set(["q", "query", "search", "keyword", "keywords", "s"]);
+
+// Words of generic careers phrases such as `join-our-team`, `open-roles`, `work-with-us`.
+const GENERIC_CAREERS_WORDS = new Set([
+  "about", "all", "apply", "at", "career", "careers", "current", "employment", "for", "get",
+  "here", "hiring", "involved", "job", "jobs", "join", "life", "now", "open", "opening",
+  "openings", "opportunities", "opportunity", "our", "position", "positions", "role", "roles",
+  "team", "the", "us", "vacancies", "vacancy", "with", "work", "working",
+]);
+
+/** Whether one path segment or query value names a single posting: an id, or a job title slug. */
+function isPostingSpecific(value: string): boolean {
+  if (/\d{3,}/.test(value)) {
+    return true;
+  }
+  if (value.split(/[-_.]+/).some((token) => /^(?=.*\d)(?=.*[a-f])[0-9a-f]{8,}$/.test(token))) {
+    return true;
+  }
+  const words = value.split("-").filter(Boolean);
+  return (
+    words.length >= 2 &&
+    words.every((word) => /^[a-z]+$/.test(word)) &&
+    !/^(careers?|jobs?|work|working)-at-/.test(value) &&
+    !words.every((word) => GENERIC_CAREERS_WORDS.has(word))
+  );
+}
+
+/**
+ * Whether a link points at one posting rather than a careers index, a home,
+ * login, or search page: it has an ATS or job-board id, or some path segment
+ * or query value is an id or a job title slug.
+ */
+export function identifiesPosting(raw: string | null | undefined): boolean {
+  const url = parseHttpUrl(raw);
+  if (!url) {
+    return false;
+  }
+  if (parseAtsLink(raw)) {
+    return true;
+  }
+  const params = [...url.searchParams.entries()]
+    .filter(([key]) => !TRACKING_PARAMS.some((pattern) => pattern.test(key)))
+    .map(([key, value]) => [key.toLowerCase(), value.toLowerCase()] as const);
   const segments = url.pathname
     .split("/")
     .filter(Boolean)
     .map((segment) => segment.toLowerCase().replace(/\.[a-z0-9]+$/, ""));
-  while (segments.length > 0 && DEFAULT_PAGE_SEGMENT.test(segments[segments.length - 1]!)) {
-    segments.pop();
+  if (
+    params.some(([key, value]) => SEARCH_PARAMS.has(key) || (key === "cmd" && value === "login")) ||
+    segments.some((segment) => LOGIN_OR_SEARCH_SEGMENT.test(segment))
+  ) {
+    return false;
   }
-  const last = segments.pop();
-  return last !== undefined && !INDEX_PAGE_SEGMENTS.has(last);
+  return [
+    ...segments.filter((segment) => !DEFAULT_PAGE_SEGMENT.test(segment)),
+    ...params.map(([, value]) => value),
+  ].some(isPostingSpecific);
+}
+
+/**
+ * The id a newsletter or link list gives the job a link points at: the
+ * normalized link, plus the title when the link is a shared careers page, so
+ * two jobs on one careers page stay two jobs.
+ */
+export function linkExternalId(raw: string | null | undefined, title: string): string | null {
+  const normalized = normalizeUrl(raw);
+  if (!normalized || identifiesPosting(raw)) {
+    return normalized;
+  }
+  return `${normalized}#${title.toLowerCase().replace(/\s+/g, " ").trim()}`;
 }
 
 /**
@@ -161,11 +215,7 @@ function identifiesPosting(url: URL): boolean {
  * ATS's different link styles.
  */
 export function linkKeys(raw: string | null | undefined): string[] {
-  const url = parseHttpUrl(raw);
-  if (!url) {
-    return [];
-  }
-  const keys = identifiesPosting(url) ? [`url:${normalizeUrl(raw)}`] : [];
+  const keys = identifiesPosting(raw) ? [`url:${normalizeUrl(raw)}`] : [];
   const ats = parseAtsLink(raw);
   if (ats && !NON_UNIQUE_JOB_IDS.has(ats.provider)) {
     // Greenhouse and job-board ids are unique on their own; the others are per account.

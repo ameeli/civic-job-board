@@ -83,7 +83,7 @@ export async function ingestSourceResult(
   }
   // An empty full listing means the source broke, not that every job closed; it is left alone.
 
-  return { seen: result.listedIds?.length ?? result.jobs.length, new: created };
+  return { seen: result.seen ?? result.listedIds?.length ?? result.jobs.length, new: created };
 }
 
 async function ingestJob(
@@ -205,7 +205,7 @@ async function findDuplicateJob(
         trigramSimilarity(match.title, data.title) >= SHARED_LINK_TITLE_SIMILARITY;
       if (
         (byAtsId || byLink) &&
-        !(await hasSightingFrom(tx, match.jobId, source))
+        (await canMergeSighting(tx, match.jobId, source, keys))
       ) {
         return match.jobId;
       }
@@ -233,7 +233,7 @@ async function findDuplicateJob(
       (!best || similarity > best.similarity) &&
       compatiblePay(candidate, data) &&
       compatibleLocation(candidate, data) &&
-      !(await hasSightingFrom(tx, candidate.id, source))
+      (await canMergeSighting(tx, candidate.id, source, keys))
     ) {
       best = { id: candidate.id, similarity };
     }
@@ -241,13 +241,20 @@ async function findDuplicateJob(
   return best?.id ?? null;
 }
 
-async function hasSightingFrom(tx: Db, jobId: number, source: string): Promise<boolean> {
-  const [row] = await tx
-    .select({ id: jobSightings.id })
+async function canMergeSighting(tx: Db, jobId: number, source: string, keys: string[]): Promise<boolean> {
+  const sightings = await tx
+    .select({ source: jobSightings.source, linkKeys: jobSightings.linkKeys })
     .from(jobSightings)
-    .where(and(eq(jobSightings.jobId, jobId), eq(jobSightings.source, source)))
-    .limit(1);
-  return row !== undefined;
+    .where(eq(jobSightings.jobId, jobId));
+  const atsKeys = keys.filter((key) => key.startsWith("ats:"));
+  return sightings.every((sighting) =>
+    sighting.source !== source &&
+    !sighting.linkKeys.some((known) =>
+      known.startsWith("ats:") && atsKeys.some((incoming) =>
+        known.split(":")[1] === incoming.split(":")[1] && known !== incoming,
+      ),
+    ),
+  );
 }
 
 function compatiblePay(
@@ -295,7 +302,7 @@ export async function refreshJob(tx: Db, jobId: number): Promise<void> {
     .map((s) => s.data.postedAt)
     .filter((d): d is string => d !== null)
     .map((d) => new Date(d).getTime());
-  const expiresAt = first((s) => s.data.expiresAt);
+  const expiresAt = sightings.find((s) => s.data.expiresAt !== undefined)?.data.expiresAt;
   const organizationId = first((s) => s.organizationId);
 
   await tx
@@ -443,7 +450,7 @@ export function toSightingData(job: NormalizedJob): SightingData {
     description: job.description,
     applyUrl: job.applyUrl,
     postedAt: job.postedAt?.toISOString() ?? null,
-    expiresAt: job.expiresAt?.toISOString() ?? null,
+    ...(job.expiresAt !== undefined ? { expiresAt: job.expiresAt?.toISOString() ?? null } : {}),
     boardTags: job.boardTags,
   };
 }
@@ -457,7 +464,7 @@ export function mergeSightingData(previous: SightingData, next: SightingData): S
   const merged = { ...previous };
   for (const key of Object.keys(next) as (keyof SightingData)[]) {
     const value = next[key];
-    if (value !== null && !(Array.isArray(value) && value.length === 0)) {
+    if (value !== undefined && (value !== null || key === "expiresAt") && !(Array.isArray(value) && value.length === 0)) {
       (merged as Record<string, unknown>)[key] = value;
     }
   }

@@ -97,7 +97,7 @@ function emptyJob(externalId: string, link: string, title: string, orgName: stri
     description: null,
     applyUrl: link,
     postedAt: null,
-    expiresAt: null,
+    expiresAt: undefined,
     boardTags: [],
   };
 }

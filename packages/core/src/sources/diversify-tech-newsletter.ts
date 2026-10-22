@@ -124,7 +124,7 @@ function parseJobLine(
     description: null,
     applyUrl: href,
     postedAt: publishedAt,
-    expiresAt: null,
+    expiresAt: undefined,
     boardTags: group ? [{ axis: "section", tag: group }] : [],
     via,
   };

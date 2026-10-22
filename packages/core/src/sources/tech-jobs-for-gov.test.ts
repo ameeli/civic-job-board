@@ -54,6 +54,18 @@ describe("Tech Jobs for Gov", () => {
     expect(job.page?.html).not.toMatch(/<script(?![^>]*ld\+json)/i);
   });
 
+  it.each([null, undefined])("distinguishes cleared and omitted REST deadlines: %s", async (deadline) => {
+    const records = (await import("./fixtures/tech-jobs-for-gov/records.json")).default;
+    const result = await techJobsForGov.fetchJobs(testContext(fakeHttp(routes({
+      [`${API}/job-listings?include=3756,3749,3748&per_page=100`]: {
+        body: JSON.stringify(records.map((record) => ({ ...record, _job_expires: deadline }))),
+      },
+    }))));
+
+    expect(result.jobs).toHaveLength(3);
+    expect(result.jobs.map((job) => job.expiresAt)).toEqual([deadline, deadline, deadline]);
+  });
+
   it("re-reads only jobs that are new or changed", async () => {
     const http = fakeHttp(
       routes({

@@ -60,7 +60,7 @@ export const techJobsForGood: SourceAdapter = {
     }
     // A free job is open even if the sitemap has not caught up with it yet.
     const ids = new Set([...listedIds, ...cards.map(({ id }) => id)]);
-    return { jobs, listedIds: [...ids], partial };
+    return { jobs, listedIds: [...ids], seen: cards.length, partial };
   },
 };
 
@@ -130,7 +130,7 @@ async function withJobPage(context: SourceContext, card: ListingCard): Promise<N
     description: null,
     applyUrl: null,
     postedAt: null,
-    expiresAt: null,
+    expiresAt: undefined,
     boardTags: card.boardTags,
   };
   const page = await getOptional(context, sourceUrl);
@@ -152,7 +152,7 @@ async function withJobPage(context: SourceContext, card: ListingCard): Promise<N
     description: posting.description,
     applyUrl: applyUrl ? decodeEntities(applyUrl) : null,
     postedAt: posting.postedAt,
-    expiresAt: posting.expiresAt,
+    expiresAt: posting.expiresAt ?? undefined,
     page: { url: page.url, html: compactPageCopy(page.body) },
   };
 }

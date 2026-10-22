@@ -192,6 +192,24 @@ describe("ingestSourceResult", () => {
     expect(await db.select().from(jobs)).toHaveLength(1);
   });
 
+  it.each([
+    ["https://job-boards.greenhouse.io/org/jobs/111", "https://org.example/careers?gh_jid=222", false],
+    ["https://job-boards.greenhouse.io/org/jobs/111", "https://org.example/careers?gh_jid=222", true],
+    ["https://org.example/careers?gh_jid=222", "https://job-boards.greenhouse.io/org/jobs/111", false],
+    ["https://jobs.lever.co/org/111", "https://jobs.lever.co/org/222", false],
+    ["https://jobs.ashbyhq.com/org/111", "https://jobs.ashbyhq.com/org/222", false],
+  ] as const)("keeps conflicting requisitions apart through title and shared-link matching: %s", async (first, second, shared) => {
+    const sharedUrl = "https://board.example/jobs/1001";
+    await ingest(db, "tech-jobs-for-good", listing([job({ sourceUrl: sharedUrl, applyUrl: first })]));
+    await ingest(db, "dscovery", listing([job({ externalId: "bridge", sourceUrl: sharedUrl, applyUrl: null })]));
+    await ingest(db, "civic-tech-field-guide", listing([job({ externalId: "rec1", sourceUrl: shared ? sharedUrl : "https://other.example/jobs/2002", applyUrl: second })]));
+
+    expect(await db.select().from(jobs)).toHaveLength(2);
+    const sightings = await db.select().from(jobSightings);
+    expect(sightings[0]!.jobId).toBe(sightings[1]!.jobId);
+    expect(sightings[2]!.jobId).not.toBe(sightings[0]!.jobId);
+  });
+
   it("keeps jobs apart when the titles match but the pay does not", async () => {
     await ingest(db, "tech-jobs-for-good", listing([job({ applyUrl: "https://careers.example/a" })]));
     await ingest(
@@ -400,6 +418,24 @@ describe("closure", () => {
     expect((await db.select().from(jobs))[0]!.status).toBe("open");
     await updateJobStatuses(db, later(3));
     expect((await db.select().from(jobs))[0]).toMatchObject({ status: "closed", closedReason: "expired" });
+  });
+
+  it("preserves an omitted deadline and reopens after an authoritative clear", async () => {
+    await ingest(db, "tech-jobs-for-gov", listing([job({ expiresAt: later(1) })]));
+    await ingest(db, "dscovery", listing([job({ externalId: "other", expiresAt: later(1) })]));
+    expect(await updateJobStatuses(db, later(2))).toEqual({ closed: 1, reopened: 0 });
+
+    await ingest(db, "tech-jobs-for-gov", listing([job({ expiresAt: undefined, description: null })]), later(3));
+    expect(await updateJobStatuses(db, later(3))).toEqual({ closed: 0, reopened: 0 });
+    expect((await db.select().from(jobs))[0]!.expiresAt).toEqual(later(1));
+
+    await ingest(db, "tech-jobs-for-gov", listing([job({ expiresAt: null, description: null })]), later(4));
+    expect(await updateJobStatuses(db, later(4))).toEqual({ closed: 0, reopened: 1 });
+    expect((await db.select().from(jobs))[0]).toMatchObject({ expiresAt: null, status: "open", closedAt: null, description: "Build things." });
+    expect((await db.select().from(jobSightings)).find((s) => s.source === "tech-jobs-for-gov")!.data.expiresAt).toBeNull();
+
+    await ingest(db, "tech-jobs-for-gov", listing([job({ expiresAt: later(8) })]), later(5));
+    expect((await db.select().from(jobs))[0]!.expiresAt).toEqual(later(8));
   });
 
   it("trims page copies of jobs closed more than 90 days ago and keeps the jobs", async () => {

@@ -19,6 +19,7 @@ describe("Tech Jobs for Good", () => {
     const result = await techJobsForGood.fetchJobs(testContext(http));
 
     expect(result.jobs.map((job) => job.externalId)).toEqual(["37063", "37065", "37062"]);
+    expect(result.seen).toBe(3);
     // Premium-only jobs from the sitemap are never fetched.
     expect(http.requested).not.toContain(`${ORIGIN}/jobs/36503/`);
     expect(http.requested).not.toContain(`${ORIGIN}/jobs/36178/`);
@@ -59,6 +60,25 @@ describe("Tech Jobs for Good", () => {
     );
 
     expect(result.jobs).toEqual([]);
+    expect(result.seen).toBe(3);
     expect(result.listedIds!.sort()).toEqual(["36178", "36503", "37062", "37063", "37065"]);
   });
+
+  it("reports an empty free listing even while the premium sitemap is populated", async () => {
+    const http = fakeHttp({ ...routes, [`${ORIGIN}/jobs/?page=1`]: { body: "<html></html>" } });
+    const result = await techJobsForGood.fetchJobs(testContext(http));
+
+    expect(result.seen).toBe(0);
+    expect(result.listedIds).toContain("36503");
+    expect(result.jobs).toEqual([]);
+    expect(http.requested).toEqual([`${ORIGIN}/sitemap.xml`, `${ORIGIN}/jobs/?page=1`]);
+  });
+
+  it("counts free listings even when the deadline prevents fetching new jobs", async () => {
+    const result = await techJobsForGood.fetchJobs(testContext(fakeHttp(routes), {}, { deadline: new Date(0) }));
+
+    expect(result).toMatchObject({ jobs: [], seen: 3, partial: true });
+    expect(result.listedIds).toContain("36503");
+  });
+
 });

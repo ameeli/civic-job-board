@@ -111,6 +111,18 @@ describe("runDailyCheck", () => {
     ]);
   });
 
+  it.each([0, 3])("persists free-listing health independently of closure IDs: %s", async (seen) => {
+    const free = source("tech-jobs-for-good", async () => ({
+      jobs: [], listedIds: ["premium-1", "premium-2", "free-1", "free-2", "free-3"], seen, partial: false,
+    }));
+    const summary = await runDailyCheck(options({ sources: [free] }));
+
+    expect(summary.sources).toEqual([{ source: "tech-jobs-for-good", ok: true, seen, new: 0, partial: false }]);
+    expect(await db.select().from(sourceRuns)).toEqual([
+      expect.objectContaining({ source: "tech-jobs-for-good", ok: true, seen, new: 0 }),
+    ]);
+  });
+
   it("does nothing more when delivered twice", async () => {
     const sources = [boardA(), broken()];
     await runDailyCheck(options({ sources }));

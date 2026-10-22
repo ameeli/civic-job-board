@@ -124,7 +124,7 @@ function toJob(
     description: content ? htmlToText(content) : null,
     applyUrl: null,
     postedAt: parseDate(gmt(asString(record.date_gmt))),
-    expiresAt: parseDate(asString(record._job_expires)),
+    expiresAt: record._job_expires === null ? null : parseDate(asString(record._job_expires)) ?? undefined,
     boardTags,
     version: String(record.modified_gmt ?? ""),
   };

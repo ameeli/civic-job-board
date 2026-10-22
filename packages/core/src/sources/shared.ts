@@ -62,7 +62,7 @@ export async function withApplyPage(
     remoteType: job.remoteType ?? posting.remoteType,
     salary: job.salary ?? posting.salary,
     postedAt: job.postedAt ?? posting.postedAt,
-    expiresAt: job.expiresAt ?? posting.expiresAt,
+    expiresAt: job.expiresAt === undefined ? posting.expiresAt ?? undefined : job.expiresAt,
     page: { url: page.url, html: compactPageCopy(page.body) },
   };
 }

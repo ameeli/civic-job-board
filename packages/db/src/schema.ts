@@ -139,7 +139,7 @@ export interface SightingData {
   /** ISO 8601. */
   postedAt: string | null;
   /** ISO 8601. */
-  expiresAt: string | null;
+  expiresAt?: string | null;
   boardTags: BoardTag[];
 }
 

@@ -41,8 +41,8 @@ export interface NormalizedJob {
   description: string | null;
   applyUrl: string | null;
   postedAt: Date | null;
-  /** When the source says applications close or the listing expires. */
-  expiresAt: Date | null;
+  /** When applications close; null clears a deadline, omitted leaves it unknown. */
+  expiresAt?: Date | null;
   boardTags: BoardTag[];
   /**
    * A marker that changes whenever the source edits the job (for example a
@@ -69,6 +69,8 @@ export interface SourceContext {
 }
 
 export interface SourceResult {
+  /** Jobs on the required listing, when closure IDs include other listings. */
+  seen?: number;
   jobs: NormalizedJob[];
   /**
    * Every external id the source currently lists, when the source exposes its

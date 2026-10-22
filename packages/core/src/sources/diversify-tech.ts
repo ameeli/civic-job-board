@@ -79,7 +79,7 @@ async function fetchJobPage(
     // Jobs that take applications on the board itself have no external link.
     applyUrl: asString(record?.apply_url) ?? page.url,
     postedAt: posting?.postedAt ?? parseDate(asString(record?.published_at)),
-    expiresAt: filledAt ?? posting?.expiresAt ?? parseDate(asString(record?.expires_on)),
+    expiresAt: filledAt ?? posting?.expiresAt ?? parseDate(asString(record?.expires_on)) ?? undefined,
     boardTags: boardTags(record),
     page: { url: page.url, html: compactPageCopy(page.body) },
   };

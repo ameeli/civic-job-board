@@ -108,7 +108,7 @@ function parseJobParagraph(
     postedAt: publishedAt,
     expiresAt: deadline
       ? new Date(Date.UTC(Number(deadline[3]), Number(deadline[1]) - 1, Number(deadline[2])))
-      : null,
+      : undefined,
     boardTags: [],
   };
 }

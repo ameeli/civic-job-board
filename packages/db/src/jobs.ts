@@ -395,6 +395,13 @@ async function applyListing(db: Db, source: string, listedIds: string[], now: Da
     .set({ lastSeenAt: now, missedChecks: 0, checkedAt: now, goneAt: null })
     .where(and(eq(jobSightings.source, source), inArray(jobSightings.externalId, listedIds)));
   await db
+    .update(jobs)
+    .set({
+      lastSeenAt: sql`(select max(${jobSightings.lastSeenAt}) from ${jobSightings} where ${jobSightings.jobId} = ${jobs.id})`,
+    })
+    .where(inArray(jobs.id, db.select({ jobId: jobSightings.jobId }).from(jobSightings)
+      .where(and(eq(jobSightings.source, source), inArray(jobSightings.externalId, listedIds)))));
+  await db
     .update(jobSightings)
     .set({
       missedChecks: sql`${jobSightings.missedChecks} + 1`,

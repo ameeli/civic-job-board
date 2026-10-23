@@ -97,6 +97,33 @@ describe("ingestSourceResult", () => {
     expect(await db.select().from(aiQueue)).toHaveLength(1);
   });
 
+  it.each(["tech-jobs-for-gov", "tech-jobs-for-good", "diversify-tech"])("advances canonical last-seen for unchanged daily listings from %s", async (source) => {
+    await ingest(db, source, listing([job()]));
+    const original = (await db.select().from(jobs))[0]!;
+    for (const day of [1, 2, 3]) {
+      expect(await ingest(db, source, listing([], ["1"]), later(day))).toEqual({ seen: 1, new: 0 });
+      expect((await db.select().from(jobSightings))[0]!.lastSeenAt).toEqual(later(day));
+      expect((await db.select().from(jobs))[0]).toMatchObject({ id: original.id, firstSeenAt: NOW, lastSeenAt: later(day) });
+    }
+    await ingest(db, source, listing([], []), later(4));
+    expect((await db.select().from(jobs))[0]!.lastSeenAt).toEqual(later(3));
+    expect(await db.select().from(aiQueue)).toHaveLength(1);
+    expect(await db.select().from(jobSightings)).toHaveLength(1);
+  });
+
+  it("keeps the latest timestamp across sources and leaves unobserved jobs alone", async () => {
+    await ingest(db, "tech-jobs-for-gov", listing([job(), job({ externalId: "other", title: "Policy Lead", applyUrl: "https://org.example/jobs/2002" })]));
+    const rows = await db.select().from(jobs);
+    const original = rows.find((row) => row.title === "Senior Software Engineer")!;
+    const other = rows.find((row) => row.title === "Policy Lead")!;
+    await ingest(db, "dscovery", listing([job({ externalId: "x" })]), later(3));
+    await ingest(db, "tech-jobs-for-gov", listing([], ["1", "not-stored"]), later(1));
+    expect((await db.select().from(jobs).where(eq(jobs.id, original.id)))[0]!.lastSeenAt).toEqual(later(3));
+    await ingest(db, "tech-jobs-for-gov", listing([], ["1"]), later(4));
+    expect((await db.select().from(jobs).where(eq(jobs.id, original.id)))[0]!.lastSeenAt).toEqual(later(4));
+    expect((await db.select().from(jobs).where(eq(jobs.id, other.id)))[0]!.lastSeenAt).toEqual(NOW);
+  });
+
   it("merges the same job from two sources by its ATS job id", async () => {
     await ingest(db, "tech-jobs-for-gov", listing([job()]));
     const result = await ingest(

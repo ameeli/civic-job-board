@@ -8,6 +8,17 @@ export default defineConfig([
   {
     settings: { next: { rootDir: "apps/web/" } },
   },
+  {
+    // packages/core runs anywhere (Node, the browser, edge runtimes); only its tests may use Node.
+    files: ["packages/core/src/**/*.ts"],
+    ignores: ["**/*.test.ts", "packages/core/src/sources/fake-http.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { patterns: [{ group: ["node:*"], message: "packages/core must stay runtime-agnostic." }] },
+      ],
+    },
+  },
   globalIgnores([
     "**/node_modules/**",
     "**/.next/**",

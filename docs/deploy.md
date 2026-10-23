@@ -48,6 +48,7 @@ You need:
 | Google client secret | Step 4 | Yes |
 | `BETTER_AUTH_SECRET` | Step 5 (you generate it) | Yes |
 | `CRON_SECRET` | Step 5 (you generate it) | Yes |
+| Gemini API key | Step 5 | Yes |
 
 ## Step 1: Create the Neon project
 
@@ -99,8 +100,8 @@ DATABASE_URL='<direct connection string>' pnpm db:migrate
 ```
 
 It ends with `migrations applied successfully!`. In the Neon Console, open
-**Tables** to see `users`, `sessions`, `accounts`, `verifications`, and
-`source_runs`.
+**Tables** to inspect the tables defined in
+[`packages/db/src/schema.ts`](../packages/db/src/schema.ts).
 
 Running it again is safe: migrations that already ran are skipped. Run it again
 whenever a future change adds a migration, before that change is deployed. The
@@ -215,7 +216,30 @@ openssl rand -base64 32   # BETTER_AUTH_SECRET
 openssl rand -hex 32      # CRON_SECRET
 ```
 
-Then, in Vercel, open the project, select **Settings**, then
+### Create the Gemini API key
+
+The daily check uses Google's Gemini free tier; see the
+[README's AI tags section](../README.md#ai-tags) for tagging and queue behavior.
+
+([Google: Using Gemini API keys](https://ai.google.dev/gemini-api/docs/api-key))
+
+1. Open [Google AI Studio](https://aistudio.google.com) and sign in with your
+   everyday Gmail account. Accept the terms if asked. For a new user, AI Studio
+   creates a default Google Cloud project and a first API key.
+2. Open **Dashboard** in the left panel, then **API Keys**. Copy the key that
+   is there, or click **Create API key**, choose the project, and copy the new
+   one. Save it in your private note: it is a secret.
+3. **Do not set up billing** for that project. A project without a billing
+   account stays on the free tier, which is what keeps this at 0 USD/month;
+   linking billing moves it to a paid tier
+   ([Google: Rate limits, usage tiers](https://ai.google.dev/gemini-api/docs/rate-limits#usage-tiers)).
+
+Check your project's limits in AI Studio, then configure the optional
+[Gemini environment variables](../README.md#environment-variables) if needed.
+
+### Add the variables
+
+In Vercel, open the project, select **Settings**, then
 **Environment Variables**
 ([Vercel: Managing environment variables](https://vercel.com/docs/environment-variables/managing-environment-variables)).
 Add each variable below. For each one, enter the **Name** and **Value**, select
@@ -230,8 +254,7 @@ only the **Production** environment, and click **Save**.
 | `GOOGLE_CLIENT_ID` | The client ID from step 4. |
 | `GOOGLE_CLIENT_SECRET` | The client secret from step 4. |
 | `CRON_SECRET` | The value you generated above. Vercel sends it with every daily check, and the check refuses to run without it ([Vercel: Securing cron jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs)). |
-
-`GEMINI_API_KEY` is not used yet; skip it.
+| `GEMINI_API_KEY` | The Gemini API key from [Create the Gemini API key](#create-the-gemini-api-key). |
 
 Why only **Production**: Google accepts sign-ins only from the exact addresses
 in step 4, and each preview deployment gets its own changing address, so sign-in
@@ -269,12 +292,12 @@ If something goes wrong:
 
 ### The daily check
 
-[`apps/web/vercel.json`](../apps/web/vercel.json) schedules `GET /api/cron/daily`
-once a day at `0 12 * * *`, which Vercel runs some time between 12:00 and 12:59
-UTC (on Hobby, timing is only accurate to the hour).
+See the [README](../README.md#the-daily-check) for daily-check behavior and
+[its timing and continuation limits](../README.md#vercel-limits-and-chained-runs).
 
 1. In Vercel, open **Settings**, then **Cron Jobs**. The `/api/cron/daily` job
-   should be listed with that schedule
+   should be listed with the schedule in
+   [`apps/web/vercel.json`](../apps/web/vercel.json)
    ([Vercel: Managing cron jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs)).
 2. Run it once yourself from a terminal. `read -rs` keeps the secret out of
    your shell history; paste `CRON_SECRET` when it waits, then press Enter:
@@ -284,12 +307,19 @@ UTC (on Hobby, timing is only accurate to the hour).
    curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/daily
    ```
 
-   Expect `HTTP/2 200` and `{"ok":true,"runId":1}`. The same request without
-   the header returns `401`.
-3. In the Neon Console, the `source_runs` table now has a row with
-   `source = daily` and `ok = true`.
-4. The next day, check `source_runs` again for a row Vercel added between 12:00
-   and 12:59 UTC, or use **View Logs** next to the job in **Cron Jobs**.
+   Expect `HTTP/2 200` with a summary. `"moreWork":true` means work remains;
+   check Vercel's logs to confirm follow-up runs started and completed.
+   A `"status":"busy"` summary means another check already holds the lease.
+   The same request without the header returns `401`.
+3. In the Neon Console, after the checks finish, the `source_runs` table has
+   rows for the configured [sources](../packages/core/src/sources/index.ts), each with
+   `ok = true` and a `seen` count above 0. A row with `partial = true` was cut
+   short by the time limit; look for a later completed row for that source.
+   The `jobs` table holds the jobs; with `GEMINI_API_KEY` set, their
+   `summary` fills in as the AI step works through `ai_queue`.
+4. The next day, check `source_runs` again for new rows during the
+   [scheduled window](../README.md#vercel-limits-and-chained-runs), or use
+   **View Logs** next to the job in **Cron Jobs**.
 
 ## Running the app on your computer
 

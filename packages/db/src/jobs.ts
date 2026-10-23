@@ -106,10 +106,14 @@ async function ingestJob(
   let jobId: number;
   if (existing) {
     sightingId = existing.id;
-    jobId = existing.jobId;
+    jobId = (await canMergeSighting(tx, existing.jobId, source, keys, existing.id))
+      ? existing.jobId
+      : (await findDuplicateJob(tx, { source, keys, organizationId, data, now })) ??
+        (await createJob(tx, data, organizationId, now));
     await tx
       .update(jobSightings)
       .set({
+        jobId,
         data,
         sourceUrl: job.sourceUrl,
         organizationId,
@@ -120,6 +124,10 @@ async function ingestJob(
         goneAt: null,
       })
       .where(eq(jobSightings.id, existing.id));
+    if (jobId !== existing.jobId) {
+      await tx.update(pageCopies).set({ jobId }).where(eq(pageCopies.sightingId, existing.id));
+      await refreshJob(tx, existing.jobId);
+    }
   } else {
     jobId =
       (await findDuplicateJob(tx, { source, keys, organizationId, data, now })) ??
@@ -149,7 +157,7 @@ async function ingestJob(
       .values({ jobId, sightingId, url: job.page.url, html: job.page.html, fetchedAt: now })
       .onConflictDoUpdate({
         target: pageCopies.sightingId,
-        set: { url: job.page.url, html: job.page.html, fetchedAt: now },
+        set: { jobId, url: job.page.url, html: job.page.html, fetchedAt: now },
       });
   }
   await refreshJob(tx, jobId);
@@ -241,13 +249,19 @@ async function findDuplicateJob(
   return best?.id ?? null;
 }
 
-async function canMergeSighting(tx: Db, jobId: number, source: string, keys: string[]): Promise<boolean> {
+async function canMergeSighting(
+  tx: Db,
+  jobId: number,
+  source: string,
+  keys: string[],
+  sightingId?: number,
+): Promise<boolean> {
   const sightings = await tx
-    .select({ source: jobSightings.source, linkKeys: jobSightings.linkKeys })
+    .select({ id: jobSightings.id, source: jobSightings.source, linkKeys: jobSightings.linkKeys })
     .from(jobSightings)
     .where(eq(jobSightings.jobId, jobId));
   const atsKeys = keys.filter((key) => key.startsWith("ats:"));
-  return sightings.every((sighting) =>
+  return sightings.filter((sighting) => sighting.id !== sightingId).every((sighting) =>
     sighting.source !== source &&
     !sighting.linkKeys.some((known) =>
       known.startsWith("ats:") && atsKeys.some((incoming) =>
@@ -258,9 +272,12 @@ async function canMergeSighting(tx: Db, jobId: number, source: string, keys: str
 }
 
 function compatiblePay(
-  job: { salaryMin: number | null; salaryMax: number | null; salaryPeriod: string | null },
+  job: { salaryMin: number | null; salaryMax: number | null; salaryPeriod: string | null; salaryCurrency: string | null },
   data: SightingData,
 ): boolean {
+  if (job.salaryCurrency && data.salary?.currency && job.salaryCurrency !== data.salary.currency) {
+    return false;
+  }
   if (!data.salary || job.salaryMin === null || job.salaryPeriod === null) {
     return true;
   }

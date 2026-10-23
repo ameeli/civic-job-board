@@ -210,6 +210,53 @@ describe("ingestSourceResult", () => {
     expect(sightings[2]!.jobId).not.toBe(sightings[0]!.jobId);
   });
 
+  it.each([
+    [false, false], [false, true], [true, false], [true, true],
+  ])("reassociates an updated conflicting sighting (target=%s, fresh page=%s)", async (targetExists, freshPage) => {
+    const gov = job({ applyUrl: null, description: "Gov description", boardTags: [{ axis: "category", tag: "Gov" }], page: { url: "https://gov.example/jobs/1", html: "old copy" } });
+    const fieldGuide = job({ externalId: "rec1", sourceUrl: "https://field.example/jobs/1001", applyUrl: "https://job-boards.greenhouse.io/codeforsomewhere/jobs/111", description: "Field description", boardTags: [{ axis: "category", tag: "Field" }] });
+    await ingest(db, "tech-jobs-for-gov", listing([gov]));
+    await ingest(db, "civic-tech-field-guide", listing([fieldGuide], null));
+    const [original] = await db.select().from(jobs);
+    expect(await db.select().from(jobs)).toHaveLength(1);
+    const applyUrl = "https://job-boards.greenhouse.io/codeforsomewhere/jobs/222";
+    if (targetExists) {
+      await ingest(db, "dscovery", listing([job({ externalId: "target", sourceUrl: applyUrl, applyUrl })]));
+    }
+    const updated = { ...gov, applyUrl, page: freshPage ? { url: gov.sourceUrl, html: "new copy" } : null };
+    expect(await ingest(db, "tech-jobs-for-gov", listing([updated]), later(1))).toEqual({ seen: 1, new: 0 });
+
+    const sightings = await db.select().from(jobSightings);
+    const moved = sightings.find((s) => s.source === "tech-jobs-for-gov")!;
+    expect(moved.jobId).not.toBe(original!.id);
+    expect(sightings.find((s) => s.source === "civic-tech-field-guide")!.jobId).toBe(original!.id);
+    if (targetExists) {
+      expect(sightings.find((s) => s.source === "dscovery")!.jobId).toBe(moved.jobId);
+    }
+    expect(await db.select().from(jobs)).toHaveLength(2);
+    expect((await db.select().from(jobs).where(eq(jobs.id, original!.id)))[0]).toMatchObject({ description: "Field description", applyUrl: fieldGuide.applyUrl });
+    expect((await db.select().from(jobs).where(eq(jobs.id, moved.jobId)))[0]).toMatchObject({ description: "Gov description", applyUrl });
+    expect(await db.select().from(jobTags).where(eq(jobTags.jobId, original!.id))).toEqual([
+      expect.objectContaining({ tag: "Field" }),
+    ]);
+    expect(await db.select().from(pageCopies)).toEqual([
+      expect.objectContaining({ jobId: moved.jobId, sightingId: moved.id, html: freshPage ? "new copy" : "old copy" }),
+    ]);
+    expect(await db.select().from(aiQueue)).toHaveLength(2);
+    await ingest(db, "tech-jobs-for-gov", listing([updated]), later(2));
+    expect(await db.select().from(jobs)).toHaveLength(2);
+    expect((await db.select().from(jobSightings).where(eq(jobSightings.id, moved.id)))[0]!.jobId).toBe(moved.jobId);
+  });
+
+  it.each([
+    ["USD", "GBP", 2], ["GBP", "USD", 2], ["USD", "USD", 1], [null, "GBP", 1], ["GBP", null, 1],
+  ] as const)("compares known salary currencies before title matching: %s / %s", async (first, second, count) => {
+    await ingest(db, "tech-jobs-for-good", listing([job({ sourceUrl: "https://board.example/jobs/1001", applyUrl: "https://careers.example/a", salary: { min: 100000, max: 120000, currency: first, period: "year" } })]));
+    await ingest(db, "civic-tech-field-guide", listing([job({ externalId: "rec1", sourceUrl: "https://field.example/jobs/2002", applyUrl: "https://careers.example/b", salary: { min: 100000, max: 120000, currency: second, period: "year" } })], null));
+
+    expect(await db.select().from(jobs)).toHaveLength(count);
+  });
+
   it("keeps jobs apart when the titles match but the pay does not", async () => {
     await ingest(db, "tech-jobs-for-good", listing([job({ applyUrl: "https://careers.example/a" })]));
     await ingest(

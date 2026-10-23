@@ -1,3 +1,4 @@
+import { SOURCES } from "@civic-job-board/core";
 import type { FetchLike, NormalizedJob, SourceAdapter } from "@civic-job-board/core";
 import { acquireLease, aiQueue, jobTags, jobs, sourceRuns, type Db } from "@civic-job-board/db";
 import { createTestDb } from "@civic-job-board/db/testing";
@@ -121,6 +122,23 @@ describe("runDailyCheck", () => {
     expect(await db.select().from(sourceRuns)).toEqual([
       expect.objectContaining({ source: "tech-jobs-for-good", ok: true, seen, new: 0 }),
     ]);
+  });
+
+  it("persists observed Field Guide listings when enrichment misses the deadline", async () => {
+    const adapter = SOURCES.find((s) => s.id === "civic-tech-field-guide")!;
+    const feed = '<rss version="2.0"><channel><item><guid>civictech.guide:jobs:one</guid><title>Engineer</title><link>https://org.example/jobs/1001</link></item><item><guid>civictech.guide:jobs:two</guid><title>Designer</title><link>https://org.example/jobs/1002</link></item></channel></rss>';
+    const slow = source(adapter.id, (context) => adapter.fetchJobs({
+      ...context,
+      deadline: new Date(0),
+      http: { get: async (url) => ({ status: 200, url, body: feed, headers: { get: () => null } }) },
+    }));
+    const summary = await runDailyCheck(options({ sources: [slow] }));
+
+    expect(summary.sources).toEqual([{ source: adapter.id, ok: true, seen: 2, new: 0, partial: true }]);
+    expect(await db.select().from(sourceRuns)).toEqual([
+      expect.objectContaining({ source: adapter.id, ok: true, seen: 2, new: 0, partial: true }),
+    ]);
+    expect(await db.select().from(jobs)).toEqual([]);
   });
 
   it("does nothing more when delivered twice", async () => {

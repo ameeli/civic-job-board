@@ -19,6 +19,7 @@ describe("Civic Tech Field Guide", () => {
 
     expect(result.listedIds).toBeNull();
     expect(result.jobs).toHaveLength(4);
+    expect(result.seen).toBe(4);
     expect(result.jobs[0]).toMatchObject({
       externalId: "recY5rZXzRKsVxN70",
       title: "East Africa Programme Officer",
@@ -63,8 +64,29 @@ describe("Civic Tech Field Guide", () => {
     );
 
     expect(result.jobs).toHaveLength(4);
+    expect(result.seen).toBe(4);
     expect(http.requested).toEqual([FEED]);
   });
+
+  it.each([false, true])("counts observed listings after the deadline (some known=%s)", async (someKnown) => {
+    const http = fakeHttp({ [FEED]: { fixture: "civic-tech-field-guide/feed.xml" } });
+    const result = await civicTechFieldGuide.fetchJobs(testContext(http,
+      someKnown ? { recY5rZXzRKsVxN70: { version: null } } : {},
+      { deadline: new Date(0) },
+    ));
+
+    expect(result).toMatchObject({ seen: 4, partial: true, listedIds: null });
+    expect(result.jobs).toHaveLength(someKnown ? 1 : 0);
+    expect(http.requested).toEqual([FEED]);
+  });
+
+  it("does not count invalid feed entries as observed jobs", async () => {
+    const http = fakeHttp({ [FEED]: { body: '<rss version="2.0"><channel><item><title>Missing link</title><guid>invalid</guid></item></channel></rss>' } });
+    const result = await civicTechFieldGuide.fetchJobs(testContext(http));
+
+    expect(result).toEqual({ jobs: [], listedIds: null, seen: 0, partial: false });
+  });
+
 });
 
 describe("splitTitleAtEmployer", () => {

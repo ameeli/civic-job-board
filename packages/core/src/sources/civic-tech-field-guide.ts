@@ -32,11 +32,13 @@ export const civicTechFieldGuide: SourceAdapter = {
     const response = await context.http.get(FEED_URL);
     const jobs: NormalizedJob[] = [];
     let partial = false;
+    let seen = 0;
     for (const item of parseRss(response.body)) {
       const externalId = item.guid?.replace(/^civictech\.guide:jobs:/, "");
       if (!externalId || !item.title || !item.link) {
         continue;
       }
+      seen++;
       const job = fromFeedItem(externalId, item.title, item.link, item.description, item.publishedAt);
       if (context.known.has(externalId)) {
         // Keeps the employer stored when the job was new, which may have come from its apply page.
@@ -49,7 +51,7 @@ export const civicTechFieldGuide: SourceAdapter = {
         jobs.push({ ...enriched, orgName: enriched.orgName ?? job.orgName });
       }
     }
-    return { jobs, listedIds: null, partial };
+    return { jobs, listedIds: null, seen, partial };
   },
 };
 

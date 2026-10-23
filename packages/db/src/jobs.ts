@@ -126,7 +126,7 @@ async function ingestJob(
       .where(eq(jobSightings.id, existing.id));
     if (jobId !== existing.jobId) {
       await tx.update(pageCopies).set({ jobId }).where(eq(pageCopies.sightingId, existing.id));
-      await refreshJob(tx, existing.jobId, now);
+      await refreshJob(tx, existing.jobId, now, false);
     }
   } else {
     jobId =
@@ -299,7 +299,12 @@ function compatibleLocation(job: { remoteType: string | null }, data: SightingDa
  * first source in `SOURCES` order that has a value wins; the earliest posted
  * date and the full set of board tags are kept.
  */
-export async function refreshJob(tx: Db, jobId: number, now: Date): Promise<void> {
+export async function refreshJob(
+  tx: Db,
+  jobId: number,
+  now: Date,
+  preserveInferredEmployer = true,
+): Promise<void> {
   const [previous] = await tx.select().from(jobs).where(eq(jobs.id, jobId));
   const previousTags = await tx.select({ tag: jobTags.tag }).from(jobTags)
     .where(and(eq(jobTags.jobId, jobId), eq(jobTags.origin, "board")));
@@ -329,8 +334,7 @@ export async function refreshJob(tx: Db, jobId: number, now: Date): Promise<void
     .update(jobs)
     .set({
       title: first((s) => s.data.title) ?? sightings[0]!.data.title,
-      // An employer the AI step found is kept until a source names one.
-      ...(organizationId !== null ? { organizationId } : {}),
+      organizationId: organizationId ?? (preserveInferredEmployer ? previous?.organizationId ?? null : null),
       location: first((s) => s.data.location),
       remoteType: first((s) => s.data.remoteType),
       salaryMin: salary?.min ?? null,

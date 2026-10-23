@@ -155,6 +155,46 @@ describe("AI queue", () => {
     expect((await db.select().from(jobs).where(eq(jobs.id, original)))[0]!.summary).toBe("Updated summary");
   });
 
+  it.each([false, true])("refreshes employer support after an employer-hosted gh_jid split (remaining named=%s)", async (remainingNamed) => {
+    const gov: NormalizedJob = {
+      externalId: "gov", sourceUrl: "https://gov.example/jobs/1001", title: "Data Engineer",
+      orgName: "Transport Employer", orgWebsite: null, location: "Remote", remoteType: "remote",
+      salary: null, description: "Build public data systems.",
+      applyUrl: "https://transport.example/careers?gh_jid=111", postedAt: null, boardTags: [],
+    };
+    const field: NormalizedJob = {
+      ...gov, externalId: "field", sourceUrl: "https://health.example/careers?gh_jid=111",
+      applyUrl: "https://health.example/careers?gh_jid=111", orgName: remainingNamed ? "Health Employer" : null,
+    };
+    const store = (source: string, job: NormalizedJob) => ingestSourceResult(db, {
+      source, now: NOW, result: { jobs: [job], listedIds: null, partial: false },
+    });
+    await store("tech-jobs-for-gov", gov);
+    await store("civic-tech-field-guide", field);
+    expect(await db.select().from(jobs)).toHaveLength(1);
+    const original = (await db.select().from(jobs))[0]!;
+    expect((await db.select().from(jobSightings)).find((s) => s.source === "civic-tech-field-guide")!.organizationId === null).toBe(!remainingNamed);
+    await saveAiTagging(db, tagging(original.id, { summary: "Transport summary", organization: null }), NOW);
+
+    await store("tech-jobs-for-gov", { ...gov, applyUrl: "https://transport.example/careers?gh_jid=222" });
+
+    const remaining = (await db.select().from(jobs).where(eq(jobs.id, original.id)))[0]!;
+    const employers = await db.select().from(organizations);
+    const health = employers.find((org) => org.name === "Health Employer");
+    expect(remaining).toMatchObject({ organizationId: remainingNamed ? health!.id : null, summary: null, aiTaggedAt: null });
+    const moved = (await db.select().from(jobSightings)).find((s) => s.source === "tech-jobs-for-gov")!;
+    expect((await db.select().from(jobs).where(eq(jobs.id, moved.jobId)))[0]!.organizationId).toBe(original.organizationId);
+    expect((await nextAiBatch(db, { limit: 5, now: NOW })).find((j) => j.id === String(original.id))!.orgName).toBe(remainingNamed ? "Health Employer" : null);
+
+    await saveAiTagging(db, tagging(original.id, { organization: remainingNamed ? "Wrong Employer" : "Health Employer", summary: "Health summary" }), NOW);
+    const retagged = (await db.select().from(jobs).where(eq(jobs.id, original.id)))[0]!;
+    const correctEmployer = (await db.select().from(organizations)).find((org) => org.name === "Health Employer")!;
+    expect(retagged).toMatchObject({ organizationId: correctEmployer.id, summary: "Health summary", aiTaggedAt: NOW });
+    await store("civic-tech-field-guide", field);
+    expect((await db.select().from(jobs).where(eq(jobs.id, original.id)))[0]).toMatchObject({ organizationId: correctEmployer.id, summary: "Health summary" });
+    expect((await nextAiBatch(db, { limit: 5, now: NOW })).some((j) => j.id === String(original.id))).toBe(false);
+  });
+
   it.each<Partial<NormalizedJob>>([
     { title: "Updated role" }, { orgName: "Updated Employer" }, { location: "Remote" },
     { description: "Updated public description." }, { boardTags: [{ axis: "category", tag: "Science" }] },

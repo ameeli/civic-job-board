@@ -209,9 +209,9 @@ export function linkExternalId(raw: string | null | undefined, title: string): s
 }
 
 /**
- * Keys that identify the job a link points at. Two links that share any key
- * are the same job. Includes the normalized URL when the link points at one
- * posting and, for ATS links, an identifier that is the same across the
+ * Candidate keys for matching the job a link points at; ingestion checks
+ * compatibility before merging. Includes the normalized URL when the link
+ * points at one posting and, for ATS links, an identifier that is the same across the
  * ATS's different link styles.
  */
 export function linkKeys(raw: string | null | undefined): string[] {

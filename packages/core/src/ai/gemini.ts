@@ -10,11 +10,8 @@ import {
 } from "./taxonomy";
 
 /**
- * The model the daily check uses. Checked on 2026-10-20 against Google's
- * docs: Gemini 3.5 Flash-Lite is a stable model, free of charge on the free
- * tier, and the one Google recommends for high-volume simple data processing
- * (https://ai.google.dev/gemini-api/docs/models,
- * https://ai.google.dev/gemini-api/docs/pricing).
+ * Default model; see README.md's AI tags section for selection rationale
+ * and free-tier constraints.
  */
 export const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
 

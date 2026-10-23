@@ -504,7 +504,8 @@ export function toSightingData(job: NormalizedJob): SightingData {
 /**
  * A later check of the same job: its values win, but it does not erase what
  * an earlier check found and this one skipped (for example a description
- * read once from the job's page). The first posted date is kept.
+ * read once from the job's page). An explicit null deadline clears the old
+ * deadline; an omitted deadline preserves it. The first posted date is kept.
  */
 export function mergeSightingData(previous: SightingData, next: SightingData): SightingData {
   const merged = { ...previous };

@@ -1,9 +1,6 @@
 /**
- * Runs the daily check once from your computer, against DATABASE_URL, with
- * no time limit. Reads apps/web/.env.local when it exists.
- *
- *   pnpm daily-check            # sources not checked in the last 20 hours, then AI
- *   pnpm daily-check --force    # every source, even if checked today
+ * Local daily-check entry point; see README.md's Local setup section for
+ * configuration, invocation, and the work budget.
  */
 import { createDb } from "@civic-job-board/db";
 import { Pool } from "pg";

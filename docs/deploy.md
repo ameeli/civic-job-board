@@ -100,9 +100,8 @@ DATABASE_URL='<direct connection string>' pnpm db:migrate
 ```
 
 It ends with `migrations applied successfully!`. In the Neon Console, open
-**Tables** to see `users`, `sessions`, `accounts`, `verifications`,
-`source_runs`, `jobs`, `job_sightings`, `job_tags`, `organizations`,
-`ai_queue`, `page_copies`, and `run_leases`.
+**Tables** to inspect the tables defined in
+[`packages/db/src/schema.ts`](../packages/db/src/schema.ts).
 
 Running it again is safe: migrations that already ran are skipped. Run it again
 whenever a future change adds a migration, before that change is deployed. The
@@ -219,9 +218,8 @@ openssl rand -hex 32      # CRON_SECRET
 
 ### Create the Gemini API key
 
-The daily check uses Google's Gemini free tier to tag each new job's role and
-sector and write a one-line summary. Without a key the check still runs and
-new jobs simply wait untagged, so you can add this later.
+The daily check uses Google's Gemini free tier; see the
+[README's AI tags section](../README.md#ai-tags) for tagging and queue behavior.
 
 ([Google: Using Gemini API keys](https://ai.google.dev/gemini-api/docs/api-key))
 
@@ -236,13 +234,8 @@ new jobs simply wait untagged, so you can add this later.
    linking billing moves it to a paid tier
    ([Google: Rate limits, usage tiers](https://ai.google.dev/gemini-api/docs/rate-limits#usage-tiers)).
 
-Your project's free-tier limits (requests per minute and per day) are shown
-in AI Studio. The check sends at most 10 requests a minute, 5 jobs each,
-which stays well under them; if Gemini says a limit is reached, the check
-stops tagging and continues the next day.
-
-Optionally, set `GEMINI_REQUESTS_PER_MINUTE` to change that pace, or
-`GEMINI_MODEL` to use another model than `gemini-3.5-flash-lite`.
+Check your project's limits in AI Studio, then configure the optional
+[Gemini environment variables](../README.md#environment-variables) if needed.
 
 ### Add the variables
 
@@ -299,15 +292,12 @@ If something goes wrong:
 
 ### The daily check
 
-[`apps/web/vercel.json`](../apps/web/vercel.json) schedules `GET /api/cron/daily`
-once a day at `0 13 * * *`, which Vercel runs some time between 13:00 and 13:59
-UTC (on Hobby, timing is only accurate to the hour): 6 to 7 am Pacific in
-summer, 5 to 6 am in winter. Each run reads every job source, stores and
-merges the jobs, and tags new ones with Gemini; see the
-[README](../README.md#the-daily-check).
+See the [README](../README.md#the-daily-check) for daily-check behavior and
+[its timing and continuation limits](../README.md#vercel-limits-and-chained-runs).
 
 1. In Vercel, open **Settings**, then **Cron Jobs**. The `/api/cron/daily` job
-   should be listed with that schedule
+   should be listed with the schedule in
+   [`apps/web/vercel.json`](../apps/web/vercel.json)
    ([Vercel: Managing cron jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs)).
 2. Run it once yourself from a terminal. `read -rs` keeps the secret out of
    your shell history; paste `CRON_SECRET` when it waits, then press Enter:
@@ -317,22 +307,19 @@ merges the jobs, and tags new ones with Gemini; see the
    curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/daily
    ```
 
-   The first run on an empty database has about 800 jobs to read, more than
-   one 5-minute run allows. Expect `HTTP/2 200` after about four minutes, with
-   a summary that ends `"moreWork":true`: the run then started a follow-up
-   run of itself, which finishes the rest in the background over the next
-   few minutes. The same request without the header returns `401`.
-3. In the Neon Console, after a few minutes, the `source_runs` table has one
-   row per source (`tech-jobs-for-gov`, `tech-jobs-for-good`,
-   `diversify-tech`, `dscovery`, `field-guide-friday`,
-   `civic-tech-field-guide`, `diversify-tech-newsletter`), each with
+   Expect `HTTP/2 200` with a summary. `"moreWork":true` means work remains;
+   check Vercel's logs to confirm follow-up runs started and completed.
+   A `"status":"busy"` summary means another check already holds the lease.
+   The same request without the header returns `401`.
+3. In the Neon Console, after the checks finish, the `source_runs` table has
+   rows for the configured [sources](../packages/core/src/sources/index.ts), each with
    `ok = true` and a `seen` count above 0. A row with `partial = true` was cut
-   short by the time limit and is followed by another row for that source.
+   short by the time limit; look for a later completed row for that source.
    The `jobs` table holds the jobs; with `GEMINI_API_KEY` set, their
    `summary` fills in as the AI step works through `ai_queue`.
-4. The next day, check `source_runs` again for rows Vercel added between 13:00
-   and 13:59 UTC, or use **View Logs** next to the job in **Cron Jobs**. Later
-   runs take seconds.
+4. The next day, check `source_runs` again for new rows during the
+   [scheduled window](../README.md#vercel-limits-and-chained-runs), or use
+   **View Logs** next to the job in **Cron Jobs**.
 
 ## Running the app on your computer
 

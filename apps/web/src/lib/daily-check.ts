@@ -33,8 +33,8 @@ const AI_REQUEST_RESERVE_MS = 35_000;
 const AI_BATCH_SIZE = 5;
 /**
  * Gemini requests per minute. Google shows each project's free-tier limits
- * in AI Studio rather than in its docs, so this stays well under them; set
- * GEMINI_REQUESTS_PER_MINUTE to change it.
+ * in AI Studio rather than in its docs; set GEMINI_REQUESTS_PER_MINUTE to
+ * fit the project's limits (see README.md's AI tags section).
  */
 export const DEFAULT_AI_REQUESTS_PER_MINUTE = 10;
 const LEASE_NAME = "daily-check";

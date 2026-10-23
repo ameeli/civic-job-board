@@ -81,7 +81,8 @@ export type ClosedReason = "expired" | "gone";
 /**
  * Canonical jobs: one row per real job, however many sources list it. The
  * fields are merged from the job's sightings (see `job_sightings`). Jobs are
- * never deleted; a closed job keeps its row and everything linked to it.
+ * never deleted; a closed job keeps its row. Page copies have a separate
+ * retention policy (see `trimPageCopies`).
  */
 export const jobs = pgTable(
   "jobs",

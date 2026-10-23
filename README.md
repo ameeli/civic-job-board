@@ -22,7 +22,7 @@ Hosting must cost **0 USD/month**, so every piece fits a free tier:
 | Web app, server functions, daily check | [Vercel](https://vercel.com) Hobby plan, Next.js App Router | Free; one platform runs the UI, the API routes, and the built-in [cron](https://vercel.com/docs/cron-jobs). |
 | Database | [Neon](https://neon.com) Free Postgres | Free serverless Postgres that pairs with Vercel. |
 | Sign-in | [Better Auth](https://www.better-auth.com) with Google | Free library; sessions live in the app's own Neon database. See [Login](#login). |
-| AI | Google Gemini free tier (`gemini-3.5-flash-lite`) | Free; tags each new job's role and sector and writes a one-line summary. See [AI tags](#ai-tags). |
+| AI | Google Gemini free tier | Free; tags each new job's role and sector and writes a one-line summary. See [AI tags](#ai-tags). |
 | Email-only newsletters (later) | A dedicated Gmail account + Google Apps Script | Free; the script forwards new mail to the app. See [`apps-script/`](apps-script/README.md). |
 
 Supabase, Cloudflare, Render, and GitHub Actions scheduling are deliberately not
@@ -33,7 +33,7 @@ used. GitHub Actions only runs CI.
 ```
 apps/web/        Next.js app deployed to Vercel (sign-in, placeholder home page, daily cron route,
                  and the local daily-check script in scripts/)
-packages/core/   Runtime-agnostic shared code (no Node or browser APIs): source adapters, Gemini client
+packages/core/   Runtime-agnostic shared code (web-standard APIs, no Node imports): source adapters, Gemini client
 packages/db/     Drizzle schema, SQL migrations, and database helpers (storing, merging, closing jobs)
 apps-script/     Placeholder for the future Gmail forwarding script
 ```
@@ -107,11 +107,10 @@ pnpm daily-check            # sources not checked in the last 20 hours, then AI 
 pnpm daily-check --force    # every source, even one already checked today
 ```
 
-It has no time limit, so it finishes in one go (a first run on an empty
-database takes about seven minutes; later runs take seconds) and prints a
-summary. Without `GEMINI_API_KEY`, new jobs wait in the AI queue for a later
-run. To exercise the route the cron calls instead, set `CRON_SECRET`, run the
-app, and call it:
+It has a one-hour work budget and prints a summary; `moreWork: true` means
+another invocation is needed. Without `GEMINI_API_KEY`, new jobs wait in the
+AI queue for a later run. To exercise the route the cron calls instead, set
+`CRON_SECRET`, run the app, and call it:
 
 ```sh
 curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/daily
@@ -131,7 +130,7 @@ commit real values. Every `.env*` file except `.env.example` is gitignored.
 | `BETTER_AUTH_URL` | Sign-in | The app's own address without a trailing slash, such as `http://localhost:3000` or `https://civic-job-board.vercel.app`. Google's redirect URI is this plus `/api/auth/callback/google`. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Sign-in | The Google OAuth client; see [`docs/deploy.md`](docs/deploy.md#step-4-create-the-google-oauth-client). |
 | `GEMINI_API_KEY` | Daily check | Google Gemini API key ([`docs/deploy.md`](docs/deploy.md#create-the-gemini-api-key)). When unset, the check still runs and new jobs wait untagged. |
-| `GEMINI_MODEL` | Daily check | Optional. Overrides the model, `gemini-3.5-flash-lite`. |
+| `GEMINI_MODEL` | Daily check | Optional. Overrides the default model (see [AI tags](#ai-tags)); choose a model available on your project's free tier. |
 | `GEMINI_REQUESTS_PER_MINUTE` | Daily check | Optional. Gemini requests per minute, default 10 (each tags up to 5 jobs). |
 
 In production, set them in the Vercel project's environment variables
@@ -157,8 +156,9 @@ lint, typecheck, tests, and a build on every pull request and push to `main`.
 ## The daily check
 
 [`apps/web/vercel.json`](apps/web/vercel.json) schedules one cron job that calls
-`GET /api/cron/daily` once a day at `0 13 * * *` UTC: 6 am Pacific in summer
-(PDT) and 5 am in winter (PST). The route checks the `CRON_SECRET` bearer
+`GET /api/cron/daily` once a day. See
+[Vercel limits and chained runs](#vercel-limits-and-chained-runs) for the
+schedule and Pacific time window. The route checks the `CRON_SECRET` bearer
 header and runs the check
 ([`apps/web/src/lib/daily-check.ts`](apps/web/src/lib/daily-check.ts)):
 
@@ -201,7 +201,7 @@ tags. Adapters are tested against saved copies of each source in
 
 Newsletters are read three weeks back on every check, so a missed day loses
 nothing. Pages fetched for a new job are kept in `page_copies`, with scripts
-and styles removed.
+and styles removed except for JSON-LD needed to re-read structured job data.
 
 ### Duplicates
 
@@ -214,18 +214,26 @@ A new sighting joins an existing job, in order of certainty, when it has:
    0.7, computed like Postgres `pg_trgm`), and compatible pay and remote
    type.
 
-A job never takes a second sighting from the same source. Each field of the
-merged job comes from the first source that has it, in the order of
-`SOURCES` in
+A job never takes a second sighting from the same source, and known conflicting
+requisition ids from the same ATS prevent a merge. If an edited sighting reveals
+a conflicting id, it is reassociated with a compatible or new job.
+Most fields of the merged job come from the first source that has a value,
+in the order of `SOURCES` in
 [`packages/core/src/sources/index.ts`](packages/core/src/sources/index.ts).
+The earliest posted date and all board tags are kept. The first source with
+an explicit deadline value wins, including a cleared deadline. `lastSeenAt`
+tracks the latest observation across remaining sightings, including unchanged
+jobs on a full listing. After reassociation, employer attribution unsupported
+by the remaining sightings is cleared.
 Employers (`organizations`) are matched by normalized name. A job with no
 employer name is matched by its ATS account, but only when exactly one known
 employer uses that account, because many government agencies share one.
 
 ### Closing jobs
 
-Jobs, and everything attached to them, are kept forever; closing only sets
-`status` to `closed` and `closed_at`. A job closes when:
+Jobs and the owner's marks are kept forever; page copies follow the retention rule in
+[The daily check](#the-daily-check). Closing sets `status` to `closed`,
+`closed_at`, and `closed_reason`. A job closes when:
 
 - its application deadline day has passed, or
 - every source that listed it has dropped it: a source with a full listing
@@ -238,8 +246,10 @@ every job closing.
 
 ### AI tags
 
-New jobs go into the `ai_queue` table. After the sources, the check sends
-them to Gemini in batches of five, at most 10 requests a minute, and stores
+New jobs go into the `ai_queue` table. When ingestion changes a job's title,
+employer, location, description, or board-tag text, it clears the AI tags and
+summary and requeues the job. After the sources, the check sends queued jobs to Gemini in
+batches of five, paced by `GEMINI_REQUESTS_PER_MINUTE`, and stores
 for each job one function tag, one to three sector tags, a seniority, and a
 one-line summary, from the taxonomy in
 [`packages/core/src/ai/taxonomy.ts`](packages/core/src/ai/taxonomy.ts). AI
@@ -260,8 +270,9 @@ Google suggests for high-volume simple data processing
 lists free-tier limits in its docs; they are set per project and shown in
 [AI Studio](https://aistudio.google.com), as requests per minute, tokens per
 minute, and requests per day, which reset at midnight Pacific time
-([rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)). Ten
-requests a minute stays well under them. If Gemini answers 429 (limit
+([rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)). Set the
+request pace to fit your project's limits; the default cannot guarantee
+staying below token or daily quotas. If Gemini answers 429 (limit
 reached), the check stops tagging and the rest waits for the next run; a job
 the model fails to tag is retried after 1, 2, 4, ... hours, at most a day.
 
@@ -273,8 +284,9 @@ Vercel Hobby plan limits that the daily run must fit in, as documented on
 - **Cron frequency:** at most once per day per cron job; a more frequent
   expression fails the deployment. Up to 100 cron jobs per project.
   ([Usage & Pricing for Cron Jobs](https://vercel.com/docs/cron-jobs/usage-and-pricing))
-- **Timing:** precise only to the hour. `0 13 * * *` may run any time between
-  13:00 and 13:59 UTC. ([same page](https://vercel.com/docs/cron-jobs/usage-and-pricing))
+- **Timing:** precise only to the hour. The configured `0 13 * * *` may run
+  any time between 13:00 and 13:59 UTC: 6–7 am Pacific in summer (PDT),
+  5–6 am in winter (PST). ([same page](https://vercel.com/docs/cron-jobs/usage-and-pricing))
 - **Maximum function duration:** 300 seconds (5 minutes), which is both the
   default and the maximum on Hobby, so a cron invocation gets at most 300 s.
   ([Vercel Functions Limits](https://vercel.com/docs/functions/limitations#max-duration);
@@ -290,9 +302,8 @@ Vercel Hobby plan limits that the daily run must fit in, as documented on
   time spent waiting on I/O (for example, AI calls) does not count as active
   CPU. ([Vercel Hobby Plan](https://vercel.com/docs/plans/hobby))
 
-**When the work outgrows one 300-second run** (a first run on an empty
-database takes about seven minutes), the run chains to itself, combining the
-cron job with requests to the app's own API as Vercel suggests for long work
+**When the work outgrows one 300-second run**, the run chains to itself,
+combining the cron job with requests to the app's own API as Vercel suggests for long work
 ([Managing Cron Jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-job-duration)).
 It stops starting new work after 270 seconds, then calls its own route with
 `?chain=1` and the same `CRON_SECRET`. A chained call answers `202` at once

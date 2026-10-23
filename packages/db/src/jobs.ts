@@ -126,7 +126,7 @@ async function ingestJob(
       .where(eq(jobSightings.id, existing.id));
     if (jobId !== existing.jobId) {
       await tx.update(pageCopies).set({ jobId }).where(eq(pageCopies.sightingId, existing.id));
-      await refreshJob(tx, existing.jobId);
+      await refreshJob(tx, existing.jobId, now);
     }
   } else {
     jobId =
@@ -160,7 +160,7 @@ async function ingestJob(
         set: { jobId, url: job.page.url, html: job.page.html, fetchedAt: now },
       });
   }
-  await refreshJob(tx, jobId);
+  await refreshJob(tx, jobId, now);
   return !existing;
 }
 
@@ -299,7 +299,10 @@ function compatibleLocation(job: { remoteType: string | null }, data: SightingDa
  * first source in `SOURCES` order that has a value wins; the earliest posted
  * date and the full set of board tags are kept.
  */
-export async function refreshJob(tx: Db, jobId: number): Promise<void> {
+export async function refreshJob(tx: Db, jobId: number, now: Date): Promise<void> {
+  const [previous] = await tx.select().from(jobs).where(eq(jobs.id, jobId));
+  const previousTags = await tx.select({ tag: jobTags.tag }).from(jobTags)
+    .where(and(eq(jobTags.jobId, jobId), eq(jobTags.origin, "board")));
   const sightings = await tx.select().from(jobSightings).where(eq(jobSightings.jobId, jobId));
   if (sightings.length === 0) {
     return;
@@ -322,7 +325,7 @@ export async function refreshJob(tx: Db, jobId: number): Promise<void> {
   const expiresAt = sightings.find((s) => s.data.expiresAt !== undefined)?.data.expiresAt;
   const organizationId = first((s) => s.organizationId);
 
-  await tx
+  const [updated] = await tx
     .update(jobs)
     .set({
       title: first((s) => s.data.title) ?? sightings[0]!.data.title,
@@ -341,7 +344,8 @@ export async function refreshJob(tx: Db, jobId: number): Promise<void> {
       firstSeenAt: new Date(Math.min(...sightings.map((s) => s.firstSeenAt.getTime()))),
       lastSeenAt: new Date(Math.max(...sightings.map((s) => s.lastSeenAt.getTime()))),
     })
-    .where(eq(jobs.id, jobId));
+    .where(eq(jobs.id, jobId))
+    .returning();
 
   await tx.delete(jobTags).where(and(eq(jobTags.jobId, jobId), eq(jobTags.origin, "board")));
   const boardTags = new Map<string, { axis: string; tag: string }>();
@@ -355,6 +359,20 @@ export async function refreshJob(tx: Db, jobId: number): Promise<void> {
       .insert(jobTags)
       .values([...boardTags.values()].map((tag) => ({ jobId, origin: "board" as const, ...tag })))
       .onConflictDoNothing();
+  }
+  if (previous && updated && (
+    previous.title !== updated.title || previous.organizationId !== updated.organizationId ||
+    previous.location !== updated.location || previous.description !== updated.description ||
+    JSON.stringify(previousTags.map(({ tag }) => tag).sort()) !==
+      JSON.stringify([...boardTags.values()].map(({ tag }) => tag).sort())
+  )) {
+    await tx.update(jobs).set({ summary: null, aiTaggedAt: null }).where(eq(jobs.id, jobId));
+    await tx.delete(jobTags).where(and(eq(jobTags.jobId, jobId), eq(jobTags.origin, "ai")));
+    await tx.insert(aiQueue).values({ jobId, enqueuedAt: now, availableAt: now })
+      .onConflictDoUpdate({
+        target: aiQueue.jobId,
+        set: { enqueuedAt: now, availableAt: now, attempts: 0, lastError: null },
+      });
   }
 }
 

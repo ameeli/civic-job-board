@@ -8,6 +8,12 @@ describe("parseSalaryText", () => {
     ["£52,973 - £69,273", { min: 52973, max: 69273, currency: "GBP", period: "year" }],
     ["$200,000-$250,000", { min: 200000, max: 250000, currency: "USD", period: "year" }],
     ["55000", { min: 55000, max: null, currency: null, period: "year" }],
+    ["$30–45/hr", { min: 30, max: 45, currency: "USD", period: "hour" }],
+    ["USD 30–45/hour", { min: 30, max: 45, currency: "USD", period: "hour" }],
+    ["GBP 30 - 45 per hour", { min: 30, max: 45, currency: "GBP", period: "hour" }],
+    ["€30—45/hour", { min: 30, max: 45, currency: "EUR", period: "hour" }],
+    ["$45 to 30/hr", { min: 30, max: 45, currency: "USD", period: "hour" }],
+    ["5 days per week, USD 30–45/hour", { min: 30, max: 45, currency: "USD", period: "hour" }],
     ["$30 - $45/hr", { min: 30, max: 45, currency: "USD", period: "hour" }],
     ["$6,500 per month", { min: 6500, max: null, currency: "USD", period: "month" }],
   ])("parses %s", (text, expected) => {

@@ -4,7 +4,8 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   $: "USD", "US$": "USD", "£": "GBP", "€": "EUR", "C$": "CAD", "CA$": "CAD",
   "A$": "AUD", "AU$": "AUD", "₹": "INR", "¥": "JPY",
 };
-const CURRENCY_CODES = /\b(USD|GBP|EUR|CAD|AUD|NZD|INR|JPY|CHF|SEK|NOK|DKK|KES|NGN|ZAR|ETB|MXN|BRL)\b/i;
+const CURRENCY_CODES = "USD|GBP|EUR|CAD|AUD|NZD|INR|JPY|CHF|SEK|NOK|DKK|KES|NGN|ZAR|ETB|MXN|BRL";
+const CURRENCY_CODE = new RegExp(`\\b(${CURRENCY_CODES})\\b`, "i");
 
 /**
  * Plausible pay per period in currencies of a similar scale to the dollar.
@@ -62,26 +63,29 @@ export function parseSalaryText(
   if (!text) {
     return null;
   }
-  const amounts = [
-    ...text.matchAll(/(?:[A-Z]{1,2}\$|[$£€₹¥])?\s?\d[\d,]*(?:\.\d+)?\s?[kKmM]?\b/g),
-  ]
-    .map((m) => m[0])
-    // Skip bare years and small counts that are not pay ("2026", "5 days").
-    .filter((s) => /[$£€₹¥kKmM,]/.test(s) || Number(s.replace(/\D/g, "")) >= 1000)
-    .filter((s) => !/^(19|20)\d\d$/.test(s.trim()));
-  const values = amounts.map(parseAmount).filter((v): v is number => v !== null);
+  const symbol = text.match(/[A-Z]{1,2}\$|[$£€₹¥]/)?.[0];
+  const currency =
+    text.match(CURRENCY_CODE)?.[1]?.toUpperCase() ??
+    (symbol ? (CURRENCY_SYMBOLS[symbol] ?? null) : null);
+  const period = parsePeriod(text);
+  const amount = String.raw`(?:[A-Z]{1,2}\$|[$£€₹¥]|\b(?:${CURRENCY_CODES})\s+)?\s?\d[\d,]*(?:\.\d+)?\s?[kKmM]?\b`;
+  const values = [...text.matchAll(new RegExp(`(${amount})(?:\\s*(?:[-–—]|to)\\s*(${amount}))?`, "gi"))]
+    .filter((match) =>
+      /[$£€₹¥kKmM,]/.test(match[0]) ||
+      (period !== null && CURRENCY_CODE.test(match[0])) ||
+      Number(match[1]!.replace(/\D/g, "")) >= 1000,
+    )
+    .filter((match) => !/^(19|20)\d\d$/.test(match[1]!.trim()))
+    .flatMap((match) => [parseAmount(match[1]), parseAmount(match[2])])
+    .filter((value): value is number => value !== null);
   if (values.length === 0) {
     return null;
   }
-  const symbol = text.match(/[A-Z]{1,2}\$|[$£€₹¥]/)?.[0];
-  const currency =
-    text.match(CURRENCY_CODES)?.[1]?.toUpperCase() ??
-    (symbol ? (CURRENCY_SYMBOLS[symbol] ?? null) : null);
   return sanitizeSalary({
     min: values[0]!,
     max: values.length > 1 ? values[1]! : null,
     currency,
-    period: parsePeriod(text) ?? defaultPeriod,
+    period: period ?? defaultPeriod,
   });
 }
 

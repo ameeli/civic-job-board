@@ -1,0 +1,77 @@
+[
+  {
+    "id": 3756,
+    "date_gmt": "2026-09-09T22:07:28",
+    "modified_gmt": "2026-09-09T23:30:54",
+    "link": "https://civicworkstudio.com/job/chief-innovation-and-information-officer/",
+    "title": {
+      "rendered": "Chief Innovation and Information Officer"
+    },
+    "content": {
+      "rendered": "<p>SFPL seeks a Chief Innovation and Information Officer (CIIO), a visionary and mission-driven technology executive ready to shape the future of digital public services in libraries. This role is ideal for tech leaders who want to build systems that serve equity, access, and impact at scale. Technology is core to SFPL’s operations, equity agenda, and patron experience; this role leads the digital backbone of San Francisco’s library system.</p>"
+    },
+    "job-categories": [
+      9
+    ],
+    "job-types": [
+      2
+    ],
+    "_job_expires": null,
+    "_job_location": "San Francisco, CA",
+    "_company_name": "San Francisco Public Library",
+    "_company_website": null,
+    "_job_salary": "221052",
+    "work_flexibility": "Not Specified",
+    "organization_type": "City"
+  },
+  {
+    "id": 3749,
+    "date_gmt": "2026-09-09T22:07:16",
+    "modified_gmt": "2026-09-09T23:30:41",
+    "link": "https://civicworkstudio.com/job/chief-digital-officer/",
+    "title": {
+      "rendered": "Chief Digital Officer"
+    },
+    "content": {
+      "rendered": "<p>The Chief Digital Officer (CDO) is responsible for setting and executing the City-County’s enterprise digital strategy and ensuring that technology systems, digital experience, workforce capability, and enterprise applications work in harmony to deliver modern, equitable, accessible, and secure services to residents, businesses, visitors, and internal users.</p>"
+    },
+    "job-categories": [
+      9
+    ],
+    "job-types": [
+      2
+    ],
+    "_job_expires": "2026-12-07",
+    "_job_location": "Indianapolis, IN",
+    "_company_name": "City of Indianapolis and Marion County",
+    "_company_website": null,
+    "_job_salary": "106645",
+    "work_flexibility": "Hybrid",
+    "organization_type": "City"
+  },
+  {
+    "id": 3748,
+    "date_gmt": "2026-09-09T22:07:14",
+    "modified_gmt": "2026-09-09T23:30:39",
+    "link": "https://civicworkstudio.com/job/ai-product-manager-2/",
+    "title": {
+      "rendered": "AI Product Manager"
+    },
+    "content": {
+      "rendered": "<p><strong>Are you ready to lead the transformation of digital experiences using AI for the City of Phoenix? W&#39;re seeking an AI Product Manager who is passionate about delivering innovative AI solutions and driving excellence across our enterprise platforms!</strong><br />At the City of Phoenix, technology is central to connecting and empowering our community. As AI Product Manager, you will drive digital strategy by working with teams to use AI to enhance how we provide engaging, accessible, and secure services for residents, businesses, and visitors.</p>"
+    },
+    "job-categories": [
+      13
+    ],
+    "job-types": [
+      2
+    ],
+    "_job_expires": null,
+    "_job_location": "Phoenix, AZ",
+    "_company_name": "City of Phoenix",
+    "_company_website": null,
+    "_job_salary": "133660.8",
+    "work_flexibility": "Hybrid",
+    "organization_type": "City"
+  }
+]

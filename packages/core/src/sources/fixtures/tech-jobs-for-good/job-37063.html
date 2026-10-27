@@ -1,0 +1,62 @@
+<!doctype html>
+<html><body>
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org/",
+  "@type": "JobPosting",
+  "title": "Technology Consultant: Systems Integration Architecture",
+  "hiringOrganization": {
+    "name": "Element14",
+    "sameAs": "https://www.element14.ai/"
+  },
+  "jobLocation": [
+    {
+      "@type": "Place",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": " Washington",
+        "addressRegion": "DC (preferred)",
+        "addressCountry": "US"
+      }
+    }
+  ],
+  "jobLocationType": "TELECOMMUTE",
+  "applicantLocationRequirements": {
+    "@type": "Country",
+    "name": "USA"
+  },
+  "baseSalary": {
+    "@type": "MonetaryAmount",
+    "currency": "USD",
+    "value": {
+      "@type": "QuantitativeValue",
+      "minValue": 135000,
+      "maxValue": 160000,
+      "unitText": "YEAR"
+    }
+  },
+  "description": "<h3><span data-contrast=\"auto\">Overview</span></h3>\r\n<p><span data-contrast=\"auto\">Element14 is hiring a Technology Consultant with a focus on systems integration architecture to own the technical side of our data and systems work at a federal civilian health agency. You will own the technical picture end to end, from system documentation and working sessions with system teams through to current-state architecture, gap analysis and the future-state options that shape our recommendations. The role centers on architecture and analysis rather than day-to-day software development, but hands-on engineering experience is a real plus here, and the more technical you are, the more you will bring to the work that follows. We are looking for someone who can sit down with system administrators and security staff, understand how a set of systems really works and connects, and explain it clearly to the people who make decisions.</span><span data-ccp-props=\"{&quot;201341983&quot;:0,&quot;335559739&quot;:120,&quot;335559740&quot;:276}\">&nbsp;</span></p>",
+  "datePosted": "2026-10-20",
+  "validThrough": "2026-11-19"
+}
+</script>
+<script>
+$("#apply-for-job").on("click", function (event) {
+                console.log("applied");
+                $.ajax({
+                    'type': 'POST',
+                    'url': '/jobs/37063/',
+                    'contentType': 'application/JSON',
+                    'data': {'job_id': 37063},
+                    'async': true
+                }).always(function () {
+                    console.log("always");
+                }).done(function () {
+                    console.log("done");
+                }).fail(function () {
+                    console.log("fail");
+                })
+                    window.open('https://docs.google.com/forms/d/e/1FAIpQLSfzbmS2azdCkSOGGulfIwrSh2Xed-h3wdZGOcNbAGPWGKtmWQ/viewform?usp=header', target = '_blank');
+            });
+</script>
+</body></html>

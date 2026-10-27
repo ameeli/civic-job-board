@@ -8,5 +8,9 @@
   "scripts": {
     "typecheck": "tsc",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.11.2",
+    "node-html-parser": "^9.0.5"
   }
 }

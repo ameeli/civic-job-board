@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
 <channel>
-<title>New jobs | Civic Tech Field Guide</title>
-<link>https://civictech.guide/directory</link>
-<atom:link href="https://civictech.guide/api/v1/feed.xml?kind=jobs&amp;limit=100" rel="self" type="application/rss+xml"/>
-<description>What is new in the Civic Tech Field Guide, for this feed's filters.</description>
-<language>en</language>
-<lastBuildDate>Mon, 19 Oct 2026 00:00:00 GMT</lastBuildDate>
-<ttl>60</ttl>
 <item>
 <title>East Africa Programme Officer</title>
 <link>https://idc.bamboohr.com/careers/48?source=aWQ9MTk%3D</link>

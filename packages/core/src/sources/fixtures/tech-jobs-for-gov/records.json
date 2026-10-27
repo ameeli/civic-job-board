@@ -1,122 +1,77 @@
 [
- {
-  "id": 3756,
-  "date": "2026-09-09T18:07:28",
-  "date_gmt": "2026-09-09T22:07:28",
-  "guid": {
-   "rendered": "https://civicworkstudio.com/job/chief-innovation-and-information-officer/"
+  {
+    "id": 3756,
+    "date_gmt": "2026-09-09T22:07:28",
+    "modified_gmt": "2026-09-09T23:30:54",
+    "link": "https://civicworkstudio.com/job/chief-innovation-and-information-officer/",
+    "title": {
+      "rendered": "Chief Innovation and Information Officer"
+    },
+    "content": {
+      "rendered": "<p>SFPL seeks a Chief Innovation and Information Officer (CIIO), a visionary and mission-driven technology executive ready to shape the future of digital public services in libraries. This role is ideal for tech leaders who want to build systems that serve equity, access, and impact at scale. Technology is core to SFPL’s operations, equity agenda, and patron experience; this role leads the digital backbone of San Francisco’s library system.</p>"
+    },
+    "job-categories": [
+      9
+    ],
+    "job-types": [
+      2
+    ],
+    "_job_expires": null,
+    "_job_location": "San Francisco, CA",
+    "_company_name": "San Francisco Public Library",
+    "_company_website": null,
+    "_job_salary": "221052",
+    "work_flexibility": "Not Specified",
+    "organization_type": "City"
   },
-  "modified": "2026-09-09T19:30:54",
-  "modified_gmt": "2026-09-09T23:30:54",
-  "slug": "chief-innovation-and-information-officer",
-  "status": "publish",
-  "type": "job_listing",
-  "link": "https://civicworkstudio.com/job/chief-innovation-and-information-officer/",
-  "title": {
-   "rendered": "Chief Innovation and Information Officer"
+  {
+    "id": 3749,
+    "date_gmt": "2026-09-09T22:07:16",
+    "modified_gmt": "2026-09-09T23:30:41",
+    "link": "https://civicworkstudio.com/job/chief-digital-officer/",
+    "title": {
+      "rendered": "Chief Digital Officer"
+    },
+    "content": {
+      "rendered": "<p>The Chief Digital Officer (CDO) is responsible for setting and executing the City-County’s enterprise digital strategy and ensuring that technology systems, digital experience, workforce capability, and enterprise applications work in harmony to deliver modern, equitable, accessible, and secure services to residents, businesses, visitors, and internal users.</p>"
+    },
+    "job-categories": [
+      9
+    ],
+    "job-types": [
+      2
+    ],
+    "_job_expires": "2026-12-07",
+    "_job_location": "Indianapolis, IN",
+    "_company_name": "City of Indianapolis and Marion County",
+    "_company_website": null,
+    "_job_salary": "106645",
+    "work_flexibility": "Hybrid",
+    "organization_type": "City"
   },
-  "content": {
-   "rendered": "<p>SFPL seeks a Chief Innovation and Information Officer (CIIO), a visionary and mission-driven technology executive ready to shape the future of digital public services in libraries. This role is ideal for tech leaders who want to build systems that serve equity, access, and impact at scale. Technology is core to SFPL\u2019s operations, equity agenda, and patron experience; this role leads the digital backbone of San Francisco\u2019s library system.</p>\n<p>The CIIO is the Library&#39;s highest IT leadership role, with full ownership of the enterprise-wide IT strategy and its integration with the Library&#39;s broader mission and business strategy. As a core member of the executive leadership team, the CIIO balances technology and business leadership, ensuring IT capabilities drive meaningful outcomes for patrons, staff, and the communities we serve. The CIIO brings both current knowledge and future vision to shape service delivery, operational performance, and the Library&#39;s long-term digital direction. The CIIO establishes enterprise technology standards, governance, and prioritization processes and provides executive oversight for major technology decisions across the Library. This role reports directly to the Chief Operating Officer and serves on the Library\u2019s Management Team, including regular engagement with the City Librarian, Library Commission, and other key City stakeholders such as the Department of Technology (DT) and the Committee on Information Technology (COIT).<br />We welcome candidates from the public, non-profit, and private sectors who are eager to bring their expertise to a civic mission and lead digital transformation at scale.</p>\n<h3 id=\"strategic-leadership-at-the-executive-level\">Strategic Leadership at the Executive Level</h3>\n<p>The CIIO role has evolved beyond technology management. Today&#39;s CIIO drives enterprise outcomes as a strategic executive partner. The most impactful persona is the Business Digitalization Leader: a CIIO who leads digital initiatives, shapes strategy at the executive level, and champions innovation grounded in mission and business need. At the San Francisco Public Library, this means delivering seamless, equitable experiences for patrons and empowering staff with the tools and capabilities to serve their communities with excellence.</p>\n<h3 id=\"core-responsibilities\">Core Responsibilities</h3>\n<p><strong>Visionary Leadership:</strong> Develop and implement a forward-thinking IT strategy that aligns with the library&#39;s mission and goals.</p>\n<ul>\n<li>Develop and launch a 3-year IT strategic plan and roadmap that establishes vision, priorities, and execution sequencing aligned with SFPL&#39;s service model, enterprise strategy, and Vision 2030 \u2014 completed and in active use within the first 12 months.</li>\n<li>Deliver IT capabilities with unwavering reliability, sustainability, cost-efficiency, and robust security, while maintaining the agility to adapt to evolving business objectives, goals, and strategies.</li>\n<li>Define the IT operating model to foster a service-oriented, digital-ready culture across the organization.</li>\n<li>Provide strategic direction on emerging technologies and how they can be integrated across library divisions to modernize the service experience and drive digital transformation.</li>\n<li>Lead innovation efforts that leverage digital capabilities to create and deliver new value for patrons and staff.</li>\n</ul>\n<p><strong>Solution-Focused Orientation:</strong> Identify and implement technology solutions that address the needs of our patrons and staff, ensuring seamless and efficient library services.</p>\n<ul>\n<li>Oversee the strategic direction, design, development, operation and support of IT systems and programs that fulfill business needs, including enterprise architecture management, application management, security and risk management, and infrastructure and operations support management.</li>\n<li>Direct the design of the IT operating model and governance processes, collaborating across divisions to build scalable, cost-effective digital solutions that achieve core business goals. This leader ensures fiscal resilience by evaluating the feasibility of all initiatives and identifying strategic efficiencies to maintain mission-critical services during budget restrictions.</li>\n<li>Own and lead enterprise-wide technology budget planning, ensuring alignment with service priorities and long-term digital strategy. Partner with division leaders to develop and align their technology budgets, ensuring divisional input and ownership in the process. Direct the development and oversight of the annual operating and capital expenditure budgets for IT, ensuring technology investments remain consistent with the Library&#39;s strategic objectives and within approved financial plans.</li>\n<li>Enhance IT&#39;s capabilities by leveraging a multitude of internal and external resources. Direct the development of the IT sourcing strategy and provide executive oversight for strategic vendor and partner relationship management.</li>\n<li>Lead technology procurement, contract strategy and vendor accountability for the Library, including competitive solicitations, contract performance oversight, renewals, and alignment with City purchasing requirements and fiscal controls.</li>\n</ul>\n<p><strong>Collaborative Approach:</strong> Work closely with library staff, City stakeholders, and the community to understand and address IT service needs, fostering a culture of collaboration and continuous improvement.</p>\n<ul>\n<li>Build strong cross-organizational partnerships with Library leadership, divisions, and the Department of Technology, positioning IT as a trusted, proactive partner embedded in enterprise planning and decision-making.</li>\n<li>Collaborate with Public Services leadership to co-develop and lead patron-centered initiatives, prioritizing public-facing innovation that enhances the Library experience and advances equitable access to services and resources.</li>\n<li>Promote democratized digital delivery (co-create, co-deliver, co-manage) &quot;by design&quot; with more digitally savvy executives. Offer to lead efforts to establish new team structures (fusion teams), support hiring and development of technology talent, and create and deliver new support approaches from the IT function.</li>\n<li>Serve on enterprise planning and policy-making committees. Drive the development of enterprise technology standards, governance processes and performance metrics to ensure IT delivers value to the enterprise. Manage risks through the effective design, delivery and management of I&amp;T capabilities for the enterprise.</li>\n<li>Board-level engagement: Serve as a key partner to commissions, committees, and boards, presenting IT strategies, initiatives, and performance metrics while ensuring alignment with governance and strategic goals. Actively engage in new projects and initiatives to maintain continuous IT alignment, with the long-term goal of fully embedding technology considerations into the Library&#39;s divisional strategic planning processes.</li>\n<li>Partner with HR to develop a forward-looking IT workforce strategy that integrates AI readiness, targeted training, and organizational realignment to ensure staff capabilities evolve alongside the Library&#39;s mission.</li>\n</ul>\n<p><strong>Technical Expertise:</strong> Oversee the operational staff responsible for managing and maintaining IT infrastructure, ensuring compliance with industry standards and best practices.</p>\n<ul>\n<li>Provide leadership, coaching and direction to the IT leadership team and staff.</li>\n<li>Lead workforce planning, succession development, performance management, and organizational change within a public-sector environment, including experience navigating civil service structures, labor considerations, and evolving service delivery needs.</li>\n<li>Build a cohesive IT leadership team capable of managing all operational responsibilities effectively and independently.</li>\n<li>Lead the transition of IT staff from a task-based approach to a service-oriented model, strengthening business acumen, communication, and decision-making capabilities across the team.</li>\n</ul>\n<p><strong>Compliance and Security:</strong> Ensure the library system&#39;s IT operations comply with relevant regulations and security protocols, safeguarding patron data and information systems.</p>\n<ul>\n<li>Establish and enforce security standards, access controls, and compliance frameworks across all IT systems and platforms.</li>\n<li>Direct enterprise business continuity, disaster recovery, and major incident response planning for library technology systems, ensuring clear escalation protocols, service restoration capability, and continuity of critical public and staff-facing operations.</li>\n<li>Ensure the reliability, scalability, and security of the Library&#39;s technology infrastructure in alignment with industry best practices.</li>\n<li>Lead cybersecurity awareness and training efforts across the organization; ensure all library systems, vendors, and staff practices align with City cybersecurity policies, NIST-based frameworks, and evolving threat mitigation strategies to reduce cyber risk exposure.</li>\n</ul>\n",
-   "protected": false
-  },
-  "author": 1,
-  "featured_media": 0,
-  "template": "",
-  "job-categories": [
-   9
-  ],
-  "job-types": [
-   2
-  ],
-  "acf": [],
-  "_job_expires": null,
-  "_job_location": "San Francisco, CA",
-  "_company_name": "San Francisco Public Library",
-  "_company_website": null,
-  "_job_salary": "221052",
-  "work_flexibility": "Not Specified",
-  "state": "CA",
-  "organization_type": "City",
-  "uagb_comment_info": 0
- },
- {
-  "id": 3749,
-  "date": "2026-09-09T18:07:16",
-  "date_gmt": "2026-09-09T22:07:16",
-  "guid": {
-   "rendered": "https://civicworkstudio.com/job/chief-digital-officer/"
-  },
-  "modified": "2026-09-09T19:30:41",
-  "modified_gmt": "2026-09-09T23:30:41",
-  "slug": "chief-digital-officer",
-  "status": "publish",
-  "type": "job_listing",
-  "link": "https://civicworkstudio.com/job/chief-digital-officer/",
-  "title": {
-   "rendered": "Chief Digital Officer"
-  },
-  "content": {
-   "rendered": "<p>The Chief Digital Officer (CDO) is responsible for setting and executing the City-County\u2019s enterprise digital strategy and ensuring that technology systems, digital experience, workforce capability, and enterprise applications work in harmony to deliver modern, equitable, accessible, and secure services to residents, businesses, visitors, and internal users.</p>\n<p>This executive leadership role ensures tight integration between constituent digital experience, enterprise application capabilities, and enterprise architecture, guaranteeing that strategic priorities translate into measurable improvements in service delivery, technical efficiency, and public satisfaction.</p>\n<p>Serving as the primary champion for technology, this role establishes and upholds digital standards, guiding portfolio investment decisions, and drives modernization through defined decision rights and a mature policy lifecycle.</p>\n<p><strong>Agency Summary</strong><br />The purpose and mission of the Information Services Agency provides information technology services to the city and county. It helps each of the city and county agencies and departments achieve their mission through technology solutions. Information Services Agency aligns its objectives with the business of city and county partners to provide accessible and reliable services to local citizens, businesses, and visitors. The agency is able to do this by cultivating a productive, collaborative, and compliant work environment in order for our workforce to meet the needs of the constituents of Indianapolis and Marion County.\u00a0</p>\n<h2 id=\"position-responsibilities\"><strong>Position Responsibilities</strong></h2>\n<p>**Digital Strategy &amp; Innovation\u00a0**</p>\n<ul>\n<li>Develop, refine, and execute the City-County Digital Strategy aligned to IT and Cybersecurity Strategies.</li>\n<li>Continuously assess market trends, emerging technologies, and modernization opportunities.</li>\n<li>Build public digital experience plans and roadmap for multi-year modernization.</li>\n<li>Champion innovation, enterprise-wide digital transformation, and change adoption</li>\n<li>Identify and remove barriers to keep the technical needs and direction of the City-County on track.</li>\n</ul>\n<p>**Enterprise Architecture &amp; Technical Governance\u00a0**</p>\n<ul>\n<li>Guide development of enterprise architecture governance structures.\u00a0</li>\n<li>Direct technical standards, processes, and procedures used across ISA.</li>\n<li>Ensure compliance with privacy, security, and governance requirements.</li>\n</ul>\n<p><strong>Enterprise Applications Portfolio Leadership</strong></p>\n<ul>\n<li>Provide executive direction and oversight of enterprise applications strategy, operations, and lifecycle management.</li>\n<li>Ensure appropriate architecture and integration across enterprise systems</li>\n<li>Govern prioritization, resource allocation, and vendor/MSP performance.</li>\n<li>Oversee delivery of application projects, compliance, service levels, and modernization outcomes.</li>\n<li>Lead decision-making processes and work closely with ISA staff in determining, developing, and managing the City-County technology portfolio.</li>\n<li>Serve as technical advisor to IT and business leaders, guiding solution design.</li>\n</ul>\n<p><strong>Enterprise Digital Experience &amp; Service Quality</strong></p>\n<ul>\n<li>Direct City-County digital experience strategy and ensure constituent-facing improvements align to modernization goals.</li>\n<li>Oversee service quality measurement, cross-agency experience insights, and customer satisfaction benchmarks.</li>\n<li>Guide change management support for agency adoption of new systems, digital tools, workflows, and service processes.</li>\n<li>Foster culture continuous improvement in processes, systems, and tools to better service the enterprise.</li>\n</ul>\n<p><strong>Digital Workforce Readiness &amp; Capability Development</strong></p>\n<ul>\n<li>Provide executive direction for enterprise technology training programs, including ERP, productivity tools, and custom applications.</li>\n<li>Integrate workforce readiness into digital strategy execution and application deployment plans.</li>\n<li>Ensure enterprise-wide training content quality, program scalability, and platform management.</li>\n<li>Champion digital literacy, adoption, and continuous technical learning across agencies.</li>\n<li>Collaborate with HR and agency leadership to establish standards and coordinated learning models.</li>\n</ul>\n<p>**People and Contract Management\u00a0**</p>\n<ul>\n<li>Collaborates with the Office of the CIO, Operations, Cybersecurity Services (including the SOC), Administration &amp; Finance, and agency executive teams</li>\n<li>Coordinates with managed service providers and vendors to deliver portfolio outcomes.</li>\n<li>Provides executive leadership and guidance to the direct reports (Application Services Manager, Enterprise Experience Manager, Technology Training Manager), and their associated teams to drive coordinated digital transformation efforts across agencies.</li>\n<li>Builds strong relationships across a diverse stakeholder landscape, including department and agency leadership, key vendors and service partners, and members of the IT Board.</li>\n<li>Ensures performance management, coaching, mentoring, and professional development across all direct and indirect reports.</li>\n<li>Oversee the contract strategy, vendor management frameworks, and MSP performance dashboards at a strategic level.</li>\n<li>Partnership with OFM on technology procurement and contracts to ensure compliance<br />\n<h2 id=\"\"></h2>\n<h2 id=\"qualifications\"><strong>Qualifications</strong></h2>\n<p>Bachelor\u2019s degree in computer science, Information Systems, or a related field or equivalent work experience. Minimum of eight (8) years of IT work experience, including architecture design and deployment, change management, and/or systems lifecycle management, with three (3) years of leadership experience in managing enterprise technology solutions. Must possess excellent communication and interpersonal skills with the ability to describe and present complex technical concepts in a non-technical fashion. A passion and ability to build and grow an organization to achieve the company\u2019s goals of providing an exceptional customer experience. Experience dealing with various levels of internal/external management including operations and executive management. Exceptional customer service skills and abilities, professional and tactful negotiator. Superior organizational, time and project management skills in managing conflicting priorities. Focused, goal oriented and can work independently with minimal direction. Management and leadership of customer service, project management and technical teams.</li>\n</ul>\n<p><strong>Preferred Job Requirements and Qualifications</strong><br />Master\u2019s degree. Senior level certifications such as ITIL, Prosci Certification, and/or PMP certification is preferred. Demonstrated leadership in public-sector digital accessibility and data governance.</p>\n",
-   "protected": false
-  },
-  "author": 1,
-  "featured_media": 0,
-  "template": "",
-  "job-categories": [
-   9
-  ],
-  "job-types": [
-   2
-  ],
-  "acf": [],
-  "_job_expires": "2026-12-07",
-  "_job_location": "Indianapolis, IN",
-  "_company_name": "City of Indianapolis and Marion County",
-  "_company_website": null,
-  "_job_salary": "106645",
-  "work_flexibility": "Hybrid",
-  "state": "IN",
-  "organization_type": "City",
-  "uagb_comment_info": 0
- },
- {
-  "id": 3748,
-  "date": "2026-09-09T18:07:14",
-  "date_gmt": "2026-09-09T22:07:14",
-  "guid": {
-   "rendered": "https://civicworkstudio.com/job/ai-product-manager-2/"
-  },
-  "modified": "2026-09-09T19:30:39",
-  "modified_gmt": "2026-09-09T23:30:39",
-  "slug": "ai-product-manager-2",
-  "status": "publish",
-  "type": "job_listing",
-  "link": "https://civicworkstudio.com/job/ai-product-manager-2/",
-  "title": {
-   "rendered": "AI Product Manager"
-  },
-  "content": {
-   "rendered": "<p><strong>Are you ready to lead the transformation of digital experiences using AI for the City of Phoenix? W&#39;re seeking an AI Product Manager who is passionate about delivering innovative AI solutions and driving excellence across our enterprise platforms!</strong><br />At the City of Phoenix, technology is central to connecting and empowering our community. As AI Product Manager, you will drive digital strategy by working with teams to use AI to enhance how we provide engaging, accessible, and secure services for residents, businesses, and visitors.</p>\n<p><strong>Your Mission:</strong></p>\n<ul>\n<li>Champion the vision and roadmap for Artificial Intelligence (AI) use across City departments.</li>\n<li>Align AI digital platform strategies with business goals and customer needs.</li>\n<li>Lead/guide teams in the design, development, and deployment of AI solutions.</li>\n<li>Drive continuous improvement, innovation, and adoption of new AI features.</li>\n<li>Ensure compliance, accessibility, and performance standards are met.</li>\n<li>Manage stakeholder relationships, budgets, and timelines for successful product delivery.</li>\n<li>Foster a culture of collaboration, learning, and excellence.</li>\n<li>Own and drive the AI product roadmap across a suite of enterprise digital platforms.</li>\n</ul>\n<p>Responsibilities will include:</p>\n<ul>\n<li>Gathering and prioritizing AI-related requirements from stakeholders across business units.</li>\n<li>Defining and maintaining product backlogs for multiple AI platform workstreams.</li>\n<li>Collaborating with developers, designers, and business analysts to deliver end-to-end solutions.</li>\n<li>Overseeing platform integrations, governance, and adoption strategies.</li>\n<li>Monitoring platform performance and driving continuous improvement Staying current on product updates, new features, and industry best practices across all managed platforms\u00bf Advocate for ethical AI practices and testing for bias, data privacy and security, and algorithmic transparency.\u00bf The ideal candidate is comfortable context-switching across platforms, can balance competing priorities, and brings experience managing enterprise-grade tools in a cross-functional environment.</li>\n</ul>\n",
-   "protected": false
-  },
-  "author": 1,
-  "featured_media": 0,
-  "template": "",
-  "job-categories": [
-   13
-  ],
-  "job-types": [
-   2
-  ],
-  "acf": [],
-  "_job_expires": null,
-  "_job_location": "Phoenix, AZ",
-  "_company_name": "City of Phoenix",
-  "_company_website": null,
-  "_job_salary": "133660.8",
-  "work_flexibility": "Hybrid",
-  "state": "AZ",
-  "organization_type": "City",
-  "uagb_comment_info": 0
- }
+  {
+    "id": 3748,
+    "date_gmt": "2026-09-09T22:07:14",
+    "modified_gmt": "2026-09-09T23:30:39",
+    "link": "https://civicworkstudio.com/job/ai-product-manager-2/",
+    "title": {
+      "rendered": "AI Product Manager"
+    },
+    "content": {
+      "rendered": "<p><strong>Are you ready to lead the transformation of digital experiences using AI for the City of Phoenix? W&#39;re seeking an AI Product Manager who is passionate about delivering innovative AI solutions and driving excellence across our enterprise platforms!</strong><br />At the City of Phoenix, technology is central to connecting and empowering our community. As AI Product Manager, you will drive digital strategy by working with teams to use AI to enhance how we provide engaging, accessible, and secure services for residents, businesses, and visitors.</p>"
+    },
+    "job-categories": [
+      13
+    ],
+    "job-types": [
+      2
+    ],
+    "_job_expires": null,
+    "_job_location": "Phoenix, AZ",
+    "_company_name": "City of Phoenix",
+    "_company_website": null,
+    "_job_salary": "133660.8",
+    "work_flexibility": "Hybrid",
+    "organization_type": "City"
+  }
 ]

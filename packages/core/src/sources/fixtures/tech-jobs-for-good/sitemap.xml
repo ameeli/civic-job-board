@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url><loc>https://techjobsforgood.com/</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-<url><loc>https://techjobsforgood.com/pricing/</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-<url><loc>https://techjobsforgood.com/jobs/37063/</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-<url><loc>https://techjobsforgood.com/jobs/37065/</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-<url><loc>https://techjobsforgood.com/jobs/37062/</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-<url><loc>https://techjobsforgood.com/jobs/36503/</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-<url><loc>https://techjobsforgood.com/jobs/36178/</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+<url><loc>https://techjobsforgood.com/</loc></url>
+<url><loc>https://techjobsforgood.com/pricing/</loc></url>
+<url><loc>https://techjobsforgood.com/jobs/37063/</loc></url>
+<url><loc>https://techjobsforgood.com/jobs/37065/</loc></url>
+<url><loc>https://techjobsforgood.com/jobs/37062/</loc></url>
+<url><loc>https://techjobsforgood.com/jobs/36503/</loc></url>
+<url><loc>https://techjobsforgood.com/jobs/36178/</loc></url>
 </urlset>

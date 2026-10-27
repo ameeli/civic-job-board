@@ -185,8 +185,8 @@ Each source has an adapter in
 one job shape: title, employer and its website, location, remote/hybrid/on
 site, pay (with unit sanity checks), description, apply link, source link,
 the source's own id, posted and closing dates, and the source's own category
-tags. Adapters are tested against saved copies of each source in
-`packages/core/src/sources/fixtures/`. Every endpoint was checked live on
+tags. See the [fixture guide](packages/core/src/sources/fixtures/README.md)
+for the source excerpts used by adapter tests. Every endpoint was checked live on
 2026-10-20.
 
 | Source | What is read |

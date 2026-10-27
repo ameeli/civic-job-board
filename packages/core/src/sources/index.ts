@@ -13,7 +13,7 @@ import { techJobsForGov } from "./tech-jobs-for-gov";
  *
  * Job boards with full records come first. Field Guide Friday comes before
  * the Field Guide's own feed: the newsletter names each job's employer and
- * gives a clean title, where the feed has neither ("Title at Employer"), so
+ * gives a clean title, where the feed combines them ("Title at Employer"), so
  * a feed job finds the newsletter's job by its apply link.
  */
 export const SOURCES: readonly SourceAdapter[] = [

@@ -12,8 +12,7 @@ import {
 
 /**
  * One row per check of one source, so the app can show when each source last
- * ran and whether it worked. `ok` and `finished_at` stay null while a run is
- * in progress.
+ * ran and whether it worked.
  */
 export const sourceRuns = pgTable("source_runs", {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),

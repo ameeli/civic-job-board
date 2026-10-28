@@ -148,8 +148,8 @@ kept as supplied by the API; salary is not parsed or converted. Posted dates
 use the API's UTC timestamp and deadlines retain the board's date text.
 
 An apply link comes from `meta._application`, with HTML entities decoded, or is
-null when absent. A fetch or save failure ends the
-source check and records the error, while earlier saves remain. Each invocation
+null when absent. A fetch, mapping, or save failure ends the source check and
+records the error, while earlier saves remain. After the check, the app
 writes one `source_runs` row with success/failure, jobs seen, new jobs, and any
 error. Empty results record success with zero seen, so the inbox banner can
 flag them later. Source failures return HTTP 502. The local curl command above

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { recordSourceRun } = vi.hoisted(() => ({ recordSourceRun: vi.fn() }));
+const { dailyCheck } = vi.hoisted(() => ({ dailyCheck: vi.fn() }));
 
-vi.mock("@civic-job-board/db", () => ({ recordSourceRun }));
+vi.mock("@/lib/daily-check", () => ({ dailyCheck }));
 vi.mock("@/lib/db", () => ({ getDb: () => "fake-db" }));
 
 import { GET } from "./route";
@@ -18,31 +18,35 @@ function cronRequest(authorization?: string): Request {
 describe("GET /api/cron/daily", () => {
   beforeEach(() => {
     vi.stubEnv("CRON_SECRET", secret);
-    recordSourceRun.mockResolvedValue({ id: 42 });
+    dailyCheck.mockResolvedValue({ id: 42, ok: true });
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
-    recordSourceRun.mockReset();
+    dailyCheck.mockReset();
   });
 
-  it("records one successful run", async () => {
+  it("runs the daily source check", async () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, runId: 42 });
-    expect(recordSourceRun).toHaveBeenCalledOnce();
-    expect(recordSourceRun).toHaveBeenCalledWith(
-      "fake-db",
-      expect.objectContaining({ source: "daily", ok: true }),
-    );
+    expect(dailyCheck).toHaveBeenCalledOnce();
+    expect(dailyCheck).toHaveBeenCalledWith("fake-db");
+  });
+
+  it("returns an error status for a failed source check", async () => {
+    dailyCheck.mockResolvedValue({ id: 43, ok: false });
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ ok: false, runId: 43 });
   });
 
   it("rejects a request without the cron secret", async () => {
     const response = await GET(cronRequest());
 
     expect(response.status).toBe(401);
-    expect(recordSourceRun).not.toHaveBeenCalled();
+    expect(dailyCheck).not.toHaveBeenCalled();
   });
 
   it("rejects every request when CRON_SECRET is unset", async () => {
@@ -51,6 +55,6 @@ describe("GET /api/cron/daily", () => {
     const response = await GET(cronRequest("Bearer "));
 
     expect(response.status).toBe(401);
-    expect(recordSourceRun).not.toHaveBeenCalled();
+    expect(dailyCheck).not.toHaveBeenCalled();
   });
 });

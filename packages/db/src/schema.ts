@@ -142,3 +142,21 @@ export type User = typeof users.$inferSelect;
 
 /** The tables Better Auth's Drizzle adapter reads and writes. */
 export const authSchema = { users, sessions, accounts, verifications };
+
+/** Source listings are retained even when they disappear from the board. */
+export const jobs = pgTable("jobs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  source: text("source").notNull(),
+  sourceJobId: text("source_job_id").notNull(),
+  title: text("title").notNull(),
+  employerName: text("employer_name"),
+  location: text("location"),
+  salary: text("salary"),
+  description: text("description").notNull(),
+  applyUrl: text("apply_url"),
+  sourceUrl: text("source_url").notNull(),
+  postedAt: timestamp("posted_at", { withTimezone: true }),
+  deadline: text("deadline"),
+}, (table) => [uniqueIndex("jobs_source_id_idx").on(table.source, table.sourceJobId)]);
+
+export type NewJob = typeof jobs.$inferInsert;

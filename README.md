@@ -6,8 +6,8 @@ A personal, single-user app that checks civic job boards and newsletters once a
 day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
-locked to the owner's account, runs a daily check that records itself in the
-database, and has CI. Job sources, AI calls, and the inbox UI are not built yet;
+locked to the owner's account, saves Tech Jobs for Gov listings on a daily
+check, and has CI. Other sources, AI calls, and the inbox UI are not built yet;
 screens and visual design are being prototyped separately.
 
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).
@@ -31,7 +31,7 @@ used. GitHub Actions only runs CI.
 
 ```
 apps/web/        Next.js app deployed to Vercel (sign-in, placeholder home page, daily cron route)
-packages/core/   Runtime-agnostic shared code (no Node or browser APIs)
+packages/core/   Source adapter, pure job mapping, and shared auth checks
 packages/db/     Drizzle schema, SQL migrations, and database helpers
 apps-script/     Placeholder for the future Gmail forwarding script
 ```
@@ -141,8 +141,20 @@ lint, typecheck, tests, and a build on every pull request and push to `main`.
 
 [`apps/web/vercel.json`](apps/web/vercel.json) schedules one cron job that calls
 `GET /api/cron/daily` once a day (`0 12 * * *`, in UTC). The route checks the
-`CRON_SECRET` bearer header, writes one row to the `source_runs` health table,
-and returns. Later, this run will poll every source and call Gemini.
+`CRON_SECRET` bearer header and calls `dailyCheck` to fetch Tech Jobs for Gov's
+WordPress API (all pages). It saves listings in `jobs`, updating by source and
+source job id without deleting older jobs. Employer, location, and salary are
+kept as supplied by the API; salary is not parsed or converted. Posted dates
+use the API's UTC timestamp and deadlines retain the board's date text.
+
+An apply link comes from `meta._application`. Only a new listing without that
+link gets a page fetch; later checks preserve its saved fallback link. A page
+without an apply button saves a null link. A fetch or save failure ends the
+source check and records the error, while earlier saves remain. Each invocation
+writes one `source_runs` row with success/failure, jobs seen, new jobs, and any
+error. Empty results record success with zero seen, so the inbox banner can
+flag them later. Source failures return HTTP 502. The local curl command above
+runs this same function. Other sources and Gemini come in later slices.
 
 Vercel Hobby plan limits that the daily run must fit in, as documented on
 2026-10-16:

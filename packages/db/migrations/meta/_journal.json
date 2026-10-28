@@ -15,6 +15,13 @@
       "when": 1792522810118,
       "tag": "0001_users_and_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793223371848,
+      "tag": "0002_lonely_nebula",
+      "breakpoints": true
     }
   ]
 }

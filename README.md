@@ -7,7 +7,11 @@ day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov listings on a daily
-check, and has CI. Other sources, AI calls, and the inbox UI are not built yet;
+check, and has CI. After sign-in, the home page shows a read-only list of saved
+jobs with their title, employer, and source, ordered by posted date, newest
+first, with undated jobs last. Titles link to the application link when present,
+otherwise to the source listing. With no saved jobs, it prompts you to run the
+daily check. Other sources, AI calls, and the full inbox UI are not built yet;
 screens and visual design are being prototyped separately.
 
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).

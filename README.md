@@ -147,9 +147,8 @@ source job id without deleting older jobs. Employer, location, and salary are
 kept as supplied by the API; salary is not parsed or converted. Posted dates
 use the API's UTC timestamp and deadlines retain the board's date text.
 
-An apply link comes from `meta._application`. Only a new listing without that
-link gets a page fetch; later checks preserve its saved fallback link. A page
-without an apply button saves a null link. A fetch or save failure ends the
+An apply link comes from `meta._application`, with HTML entities decoded, or is
+null when absent. A fetch or save failure ends the
 source check and records the error, while earlier saves remain. Each invocation
 writes one `source_runs` row with success/failure, jobs seen, new jobs, and any
 error. Empty results record success with zero seen, so the inbox banner can

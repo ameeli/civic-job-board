@@ -1,4 +1,5 @@
 import { load } from "cheerio";
+import { decodeHTML } from "entities";
 
 export const GOV_SOURCE = "tech-jobs-for-gov";
 const API = "https://civicworkstudio.com/wp-json/wp/v2/job-listings";
@@ -23,35 +24,25 @@ function descriptionText(html: string): string {
   return $.root().text().replace(/[ \t]+/g, " ").replace(/ *\n\s*/g, "\n").trim();
 }
 
-/** Pure mapping and new-job decision; saved fallback links survive later checks. */
-export function planGovJob(record: GovRecord, previous?: { applyUrl: string | null }) {
+export function mapGovJob(record: GovRecord) {
   if (!Number.isInteger(record.id) || !record.link || !record.title?.rendered ||
       typeof record.content?.rendered !== "string") {
     throw new Error("Invalid Tech Jobs for Gov listing");
   }
-  const applyUrl = record.meta?._application || previous?.applyUrl || null;
+  const applyUrl = record.meta?._application ? decodeHTML(record.meta._application) : null;
   return {
-    isNew: !previous,
-    needsPage: !previous && !applyUrl,
-    job: {
-      source: GOV_SOURCE,
-      sourceJobId: String(record.id),
-      title: descriptionText(record.title.rendered),
-      employerName: record._company_name ?? null,
-      location: record._job_location ?? null,
-      salary: record._job_salary ?? null,
-      description: descriptionText(record.content.rendered),
-      applyUrl,
-      sourceUrl: record.link,
-      postedAt: record.date_gmt ? new Date(`${record.date_gmt}Z`) : null,
-      deadline: record._job_expires || null,
-    },
+    source: GOV_SOURCE,
+    sourceJobId: String(record.id),
+    title: descriptionText(record.title.rendered),
+    employerName: record._company_name ?? null,
+    location: record._job_location ?? null,
+    salary: record._job_salary ?? null,
+    description: descriptionText(record.content.rendered),
+    applyUrl,
+    sourceUrl: record.link,
+    postedAt: record.date_gmt ? new Date(`${record.date_gmt}Z`) : null,
+    deadline: record._job_expires || null,
   };
-}
-
-export function govPageApplyLink(html: string): string | null {
-  const $ = load(html);
-  return $("a.cws-apply-button, a.application_button").attr("href") || null;
 }
 
 export async function fetchGovRecords(fetcher = fetch): Promise<GovRecord[]> {
@@ -69,10 +60,4 @@ export async function fetchGovRecords(fetcher = fetch): Promise<GovRecord[]> {
     records.push(...batch as GovRecord[]);
   }
   return records;
-}
-
-export async function fetchGovApplyLink(url: string, fetcher = fetch) {
-  const response = await fetcher(url, { signal: AbortSignal.timeout(20_000), cache: "no-store" });
-  if (!response.ok) throw new Error(`Tech Jobs for Gov page: HTTP ${response.status}`);
-  return govPageApplyLink(await response.text());
 }

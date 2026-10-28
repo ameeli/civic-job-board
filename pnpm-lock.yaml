@@ -66,6 +66,9 @@ importers:
       cheerio:
         specifier: ^1.2.0
         version: 1.2.0
+      entities:
+        specifier: ^7.0.1
+        version: 7.0.1
 
   packages/db:
     dependencies:

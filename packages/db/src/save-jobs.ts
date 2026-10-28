@@ -2,10 +2,6 @@ import { and, eq } from "drizzle-orm";
 import { jobs, type NewJob } from "./schema";
 import type { Db } from "./source-runs";
 
-export function readSourceJobs(db: Db, source: string) {
-  return db.select().from(jobs).where(eq(jobs.source, source));
-}
-
 /** Insert first so overlapping checks count only genuinely new rows. */
 export async function saveJob(db: Db, job: NewJob): Promise<boolean> {
   const inserted = await db.insert(jobs).values(job).onConflictDoNothing({

@@ -13,4 +13,4 @@ export {
 export { recordSourceRun, type Db } from "./source-runs";
 export { findUserById } from "./users";
 export { jobs, type NewJob } from "./schema";
-export { readSourceJobs, saveJob } from "./save-jobs";
+export { saveJob } from "./save-jobs";

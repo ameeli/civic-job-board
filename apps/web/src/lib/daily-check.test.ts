@@ -6,16 +6,18 @@ import { dailyCheck } from "./daily-check";
 
 afterEach(() => vi.unstubAllGlobals());
 
-it("runs API -> page fallback -> database, then updates without another page fetch", async () => {
+it("saves API application links, then updates missing links to null", async () => {
   const db = await createTestDb();
-  const fetcher = vi.fn().mockResolvedValueOnce(Response.json([{ ...record, meta: {} }]))
-    .mockResolvedValueOnce(new Response('<a class="cws-apply-button" href="https://example.org/apply">Apply</a>'));
+  const fetcher = vi.fn().mockResolvedValueOnce(Response.json([{ ...record, meta: {
+    _application: "https://example.org/?a=1&amp;b=2",
+  } }]));
   vi.stubGlobal("fetch", fetcher);
   expect(await dailyCheck(db)).toMatchObject({ source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1, error: null });
+  expect(await db.select().from(jobs)).toMatchObject([{ applyUrl: "https://example.org/?a=1&b=2" }]);
   fetcher.mockResolvedValueOnce(Response.json([{ ...record, meta: {}, _job_salary: "Competitive" }]));
   expect(await dailyCheck(db)).toMatchObject({ ok: true, seen: 1, new: 0 });
-  expect(fetcher).toHaveBeenCalledTimes(3);
-  expect(await db.select().from(jobs)).toMatchObject([{ salary: "Competitive", applyUrl: "https://example.org/apply" }]);
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  expect(await db.select().from(jobs)).toMatchObject([{ salary: "Competitive", applyUrl: null }]);
   expect(await db.select().from(sourceRuns)).toHaveLength(2);
 });
 
@@ -28,13 +30,13 @@ it("records empty results and source failures for the banner", async () => {
   expect(await db.select().from(sourceRuns)).toHaveLength(2);
 });
 
-it("retains successful saves and counts them when a later page request fails", async () => {
+it("retains successful saves and counts them when a later listing is invalid", async () => {
   const db = await createTestDb();
   vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json([
-    record, { ...record, id: 999, meta: {} },
-  ])).mockResolvedValueOnce(new Response("", { status: 502 })));
+    record, { ...record, id: null },
+  ])));
   expect(await dailyCheck(db)).toMatchObject({
-    ok: false, seen: 2, new: 1, error: "Tech Jobs for Gov page: HTTP 502",
+    ok: false, seen: 2, new: 1, error: "Invalid Tech Jobs for Gov listing",
   });
   expect(await db.select().from(jobs)).toHaveLength(1);
   expect(await db.select().from(sourceRuns)).toHaveLength(1);

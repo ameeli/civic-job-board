@@ -30,7 +30,7 @@ used. GitHub Actions only runs CI.
 ### Repository layout
 
 ```
-apps/web/        Next.js app deployed to Vercel (sign-in, placeholder home page, daily cron route)
+apps/web/        Next.js app deployed to Vercel (sign-in, saved-jobs list, daily cron route)
 packages/core/   Source adapter, pure job mapping, and shared auth checks
 packages/db/     Drizzle schema, SQL migrations, and database helpers
 apps-script/     Placeholder for the future Gmail forwarding script

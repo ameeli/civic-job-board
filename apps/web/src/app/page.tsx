@@ -1,3 +1,4 @@
+import { describeJobTags } from "@civic-job-board/core/job-tags";
 import { readJobs } from "@civic-job-board/db";
 import { getDb } from "@/lib/db";
 import { headers } from "next/headers";
@@ -37,6 +38,10 @@ export default async function HomePage() {
               <li key={job.id}>
                 <a href={job.applyUrl || job.sourceUrl}>{job.title}</a>
                 <p>{job.employerName} · {job.source}</p>
+                {job.roleTags && job.sectorTags && job.seniority && (
+                  <p>{describeJobTags({ roleTags: job.roleTags, sectorTags: job.sectorTags, seniority: job.seniority })}</p>
+                )}
+                {job.summary && <p>{job.summary}</p>}
               </li>
             ))}
           </ul>

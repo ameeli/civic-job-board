@@ -25,6 +25,8 @@ export const sourceRuns = pgTable("source_runs", {
   seen: integer("seen").notNull().default(0),
   new: integer("new").notNull().default(0),
   error: text("error"),
+  // Tagging runs only: tagged jobs whose answer lacked a valid role, sector, or seniority.
+  defaultedToUnknown: integer("defaulted_to_unknown").notNull().default(0),
 });
 
 export type SourceRun = typeof sourceRuns.$inferSelect;
@@ -156,6 +158,12 @@ export const jobs = pgTable("jobs", {
   sourceUrl: text("source_url").notNull(),
   postedAt: timestamp("posted_at", { withTimezone: true }),
   deadline: text("deadline"),
+  // Gemini's tags; all null until the job is tagged, which happens once.
+  roleTags: text("role_tags").array(),
+  sectorTags: text("sector_tags").array(),
+  seniority: text("seniority"),
+  summary: text("summary"),
+  taggedAt: timestamp("tagged_at", { withTimezone: true }),
 }, (table) => [uniqueIndex("jobs_source_id_idx").on(table.source, table.sourceJobId)]);
 
 export type NewJob = typeof jobs.$inferInsert;

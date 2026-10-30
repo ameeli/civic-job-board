@@ -7,12 +7,14 @@ day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov listings on a daily
-check, and has CI. After sign-in, the home page shows a read-only list of saved
-jobs with their title, employer, and source, ordered by posted date, newest
-first, with undated jobs last. Titles link to the application link when present,
-otherwise to the source listing. With no saved jobs, it prompts you to run the
-daily check. Other sources, AI calls, and the full inbox UI are not built yet;
-screens and visual design are being prototyped separately.
+check, tags each new job once with Gemini, and has CI. After sign-in, the home
+page shows a read-only list of saved jobs with their title, employer, and
+source, ordered by posted date, newest first, with undated jobs last; tagged
+jobs also show their role, sector, and seniority tags and a one-line summary.
+Titles link to the application link when present, otherwise to the source
+listing. With no saved jobs, it prompts you to run the daily check. Other
+sources and the full inbox UI are not built yet; screens and visual design are
+being prototyped separately.
 
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).
 
@@ -25,7 +27,7 @@ Hosting must cost **0 USD/month**, so every piece fits a free tier:
 | Web app, server functions, daily check | [Vercel](https://vercel.com) Hobby plan, Next.js App Router | Free; one platform runs the UI, the API routes, and the built-in [cron](https://vercel.com/docs/cron-jobs). |
 | Database | [Neon](https://neon.com) Free Postgres | Free serverless Postgres that pairs with Vercel. |
 | Sign-in | [Better Auth](https://www.better-auth.com) with Google | Free library; sessions live in the app's own Neon database. See [Login](#login). |
-| AI (later) | Google Gemini free tier | Free; free Google Search grounding is only available on Gemini 2.5 Flash / Flash-Lite. |
+| AI | Google Gemini free tier | Free; tags jobs with `gemini-3.1-flash-lite`. Free Google Search grounding (later) is only available on Gemini 2.5 Flash / Flash-Lite. |
 | Email-only newsletters (later) | A dedicated Gmail account + Google Apps Script | Free; the script forwards new mail to the app. See [`apps-script/`](apps-script/README.md). |
 
 Supabase, Cloudflare, Render, and GitHub Actions scheduling are deliberately not
@@ -35,7 +37,7 @@ used. GitHub Actions only runs CI.
 
 ```
 apps/web/        Next.js app deployed to Vercel (sign-in, saved-jobs list, daily cron route)
-packages/core/   Source adapter, pure job mapping, and shared auth checks
+packages/core/   Source adapter, pure job mapping, job tag lists, and shared auth checks
 packages/db/     Drizzle schema, SQL migrations, and database helpers
 apps-script/     Placeholder for the future Gmail forwarding script
 ```
@@ -119,7 +121,7 @@ commit real values. Every `.env*` file except `.env.example` is gitignored.
 | `BETTER_AUTH_SECRET` | Sign-in | Random string of at least 32 characters (`openssl rand -base64 32`) that signs session cookies. |
 | `BETTER_AUTH_URL` | Sign-in | The app's own address without a trailing slash, such as `http://localhost:3000` or `https://civic-job-board.vercel.app`. Google's redirect URI is this plus `/api/auth/callback/google`. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Sign-in | The Google OAuth client; see [`docs/deploy.md`](docs/deploy.md#step-4-create-the-google-oauth-client). |
-| `GEMINI_API_KEY` | Not used yet | Google Gemini API key for later AI features. |
+| `GEMINI_API_KEY` | Daily check | Google Gemini API key (free tier) for tagging jobs. When it is unset, tagging is skipped and recorded while fetching still works. |
 
 In production, set them in the Vercel project's environment variables
 ([`docs/deploy.md`](docs/deploy.md#step-5-set-the-environment-variables-in-vercel)).
@@ -156,8 +158,90 @@ null when absent. A fetch, mapping, or save failure ends the source check and
 records the error, while earlier saves remain. After the check, the app
 writes one `source_runs` row with success/failure, jobs seen, new jobs, and any
 error. Empty results record success with zero seen, so the inbox banner can
-flag them later. Source failures return HTTP 502. The local curl command above
-runs this same function. Other sources and Gemini come in later slices.
+flag them later. The local curl command above runs this same function. Other
+sources come in later slices.
+
+A completed run answers HTTP 200 with each part's result, and top-level `ok` is
+true only when every part succeeded. `runId` is the source check's
+`source_runs` row; `error` appears only on a failed part:
+
+```json
+{"ok":false,"runId":4,"fetch":{"ok":true,"seen":319,"new":0},"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
+```
+
+`tagging.defaulted` counts tagged jobs whose answer defaulted to unknown, and
+`tagging.transient` counts jobs whose requests failed after retries, plus
+selected jobs left unsent when recovery from a 429 or 503 fails. Jobs deferred
+only by the time budget are excluded. Only a run that throws (for example,
+the database is unreachable) answers HTTP 500.
+
+### Job tags
+
+After the source check, the daily check sends untagged jobs to Gemini
+(`gemini-3.1-flash-lite`, free tier), one job per request, oldest posted first.
+Each request sends the title, employer, and the first 4,000 characters of the
+description and asks for 1-3 role tags, 1-3 sector tags, one seniority, and a
+plain English sentence of 20 words or fewer. The accepted tags and summary
+are stored on the job, with `tagged_at` set. Summary length is not enforced
+when saving the answer. The fixed tag lists live
+in [`packages/core/src/job-tags.ts`](packages/core/src/job-tags.ts); Gemini's
+structured output schema enumerates them, and `unknown` is allowed in each.
+
+Each job's tags are saved once. A completed answer can tag the job even when
+unusable: off-list tags are dropped, a field with nothing valid left becomes
+`unknown`, and an empty summary is stored as null. A failed request
+(network error, timeout, or HTTP error such as 429 or 5xx), including a failure
+while reading the response body, or a failed tag save leaves the job untagged
+for the next run.
+An HTTP 429 (rate limited) or 503 (overloaded) retries the same job up to
+twice, waiting 30 then 60 seconds. A wait that would run past the run's time
+budget is not started. If recovery ends in any request failure, tagging stops
+for the rest of the run: that job and every remaining selected job stay
+untagged for the next run. Successful recovery continues the backlog and does
+not count as a failure. Overlapping runs may send
+duplicate requests, but saves only apply while `tagged_at` is null, so the
+first save wins and completed tags cannot be overwritten.
+
+The free tier allows 10 requests per minute and 500 per day (as of
+2026-10-30), so requests are 6.5 seconds apart, at most 35 jobs are tagged per
+run, and no request starts later than 260 seconds into the run, so it ends
+inside the 300-second limit. A backlog clears over several days. Each run writes
+a `source_runs` row with source `gemini-tagging`: `seen` is jobs sent, plus
+jobs left unsent after a 429 or 503 stop, `new` is
+jobs tagged, `defaulted_to_unknown` is tagged jobs whose answer lacked a valid
+role, sector, or seniority, and `error` is the final error for the first job
+that failed after any applicable retries. A save
+skipped because another run already tagged the job counts toward neither
+`new` nor `defaulted_to_unknown`. Without
+`GEMINI_API_KEY`, the row records that tagging was skipped.
+
+### Progress logs
+
+The daily check prints one line per step to the console, which Vercel keeps in
+the project's **Logs** (and `pnpm dev` prints in the terminal). Each line starts
+with `[daily-check]`, then an event name and `key=value` fields:
+
+```
+[daily-check] run-start
+[daily-check] source-start source=tech-jobs-for-gov
+[daily-check] source-done source=tech-jobs-for-gov ok=true fetched=319 saved=319 new=2 duration_ms=1653
+[daily-check] tagging-start selected=31 cap=35
+[daily-check] tagging-job n=1/31 job_id=<uuid> outcome=tagged attempts=1 duration_ms=1840
+[daily-check] tagging-retry job_id=<uuid> attempt=2 status=503 wait_s=30
+[daily-check] tagging-retry job_id=<uuid> attempt=3 status=503 wait_s=60
+[daily-check] tagging-job n=2/31 job_id=<uuid> outcome=transient-error status=503 error="Gemini: HTTP 503" attempts=3 duration_ms=91340
+[daily-check] tagging-stopped reason=overloaded status=503 untagged=29
+[daily-check] run-done fetched=319 new=2 tagged=1 defaulted_to_unknown=0 transient_failures=30 duration_ms=101020
+```
+
+A job's `outcome` is `tagged`, `defaulted-to-unknown`, `transient-error`, or
+`already-tagged` (an overlapping run saved it first). Each retry wait logs a
+`tagging-retry` line, and `tagging-retry-skipped` notes a wait that would have
+run past the time budget. `tagging-stopped` gives
+`reason=rate-limited`, `overloaded`, or `time-budget`; `tagging-skipped
+reason=missing-api-key` replaces the tagging lines when `GEMINI_API_KEY` is
+unset. Logs never include secrets, API keys, request headers, or job
+descriptions.
 
 Vercel Hobby plan limits that the daily run must fit in, as documented on
 2026-10-16:

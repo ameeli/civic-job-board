@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./tech-jobs-for-gov": "./src/tech-jobs-for-gov.ts"
+    "./tech-jobs-for-gov": "./src/tech-jobs-for-gov.ts",
+    "./job-tags": "./src/job-tags.ts"
   },
   "scripts": {
     "typecheck": "tsc",

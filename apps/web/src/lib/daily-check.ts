@@ -1,4 +1,4 @@
-import { fetchGovRecords, GOV_SOURCE, mapGovJob } from "@civic-job-board/core";
+import { fetchGovRecords, GOV_SOURCE, mapGovJob } from "@civic-job-board/core/tech-jobs-for-gov";
 import { recordSourceRun, saveJob, type Db } from "@civic-job-board/db";
 
 /** One source check; successful saves remain available if a later listing fails. */

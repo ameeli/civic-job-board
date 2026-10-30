@@ -1,4 +1,4 @@
-import { eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { jobs } from "./schema";
 import type { Db } from "./source-runs";
 
@@ -12,6 +12,8 @@ export function readJobsToTag(db: Db, limit: number) {
 
 export async function saveJobTags(db: Db, jobId: string, tags: {
   roleTags: string[]; sectorTags: string[]; seniority: string; summary: string | null;
-}): Promise<void> {
-  await db.update(jobs).set({ ...tags, taggedAt: new Date() }).where(eq(jobs.id, jobId));
+}): Promise<boolean> {
+  const saved = await db.update(jobs).set({ ...tags, taggedAt: new Date() })
+    .where(and(eq(jobs.id, jobId), isNull(jobs.taggedAt))).returning({ id: jobs.id });
+  return saved.length > 0;
 }

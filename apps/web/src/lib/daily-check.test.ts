@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { jobs, sourceRuns, type Db } from "@civic-job-board/db";
+import { jobs, readJobsToTag, saveJobTags, sourceRuns, type Db } from "@civic-job-board/db";
 import { createTestDb } from "@civic-job-board/db/testing";
 import record from "../../../../packages/core/src/fixtures/gov-listing.json";
 import { dailyCheck } from "./daily-check";
@@ -110,4 +110,54 @@ it("stops tagging when the run's time budget runs low", async () => {
   await dailyCheck(db, { sleep: async () => vi.setSystemTime(Date.now() + 261_000) });
   expect(gemini).toHaveBeenCalledOnce();
   expect(await taggingRuns(db)).toMatchObject([{ ok: true, seen: 1, new: 1, defaultedToUnknown: 1 }]);
+});
+
+it.each([
+  new TypeError("Connection reset"),
+  new DOMException("Body aborted", "AbortError"),
+  new DOMException("Body timed out", "TimeoutError"),
+])("retries jobs after response body read failure: %s", async failure => {
+  const db = await createTestDb();
+  vi.stubEnv("GEMINI_API_KEY", "test-key");
+  const interrupted = new Response(new ReadableStream({
+    start(controller) { controller.error(failure); },
+  }));
+  const gemini = vi.fn().mockResolvedValueOnce(interrupted).mockResolvedValueOnce(new Response("invalid JSON"));
+  vi.stubGlobal("fetch", vi.fn((url: string) => url.startsWith("https://civicworkstudio.com/")
+    ? Promise.resolve(Response.json([record])) : gemini()));
+
+  await dailyCheck(db);
+  expect(await db.select().from(jobs)).toMatchObject([{ taggedAt: null, roleTags: null }]);
+  expect(await taggingRuns(db)).toMatchObject([{
+    ok: false, seen: 1, new: 0, defaultedToUnknown: 0, error: failure.message,
+  }]);
+
+  await dailyCheck(db);
+  expect(gemini).toHaveBeenCalledTimes(2);
+  expect((await taggingRuns(db))[1]).toMatchObject({
+    ok: true, seen: 1, new: 1, defaultedToUnknown: 1, error: null,
+  });
+  expect(await db.select().from(jobs)).toMatchObject([{
+    taggedAt: expect.any(Date), roleTags: ["unknown"], sectorTags: ["unknown"], seniority: "unknown",
+  }]);
+});
+
+it.each([true, false])("does not count a skipped tag save when the answer is unusable: %s", async unusable => {
+  const db = await createTestDb();
+  vi.stubEnv("GEMINI_API_KEY", "test-key");
+  const tags = { roleTags: ["security"], sectorTags: ["education"], seniority: "senior", summary: "Secures schools." };
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    if (url.startsWith("https://civicworkstudio.com/")) return Response.json([record]);
+    const [pending] = await readJobsToTag(db, 1);
+    await saveJobTags(db, pending!.id, tags);
+    return Response.json(unusable ? {} : { candidates: [{ content: { parts: [{ text: JSON.stringify({
+      ...tags, roleTags: ["software-engineering"],
+    }) }] } }] });
+  }));
+
+  await dailyCheck(db);
+  expect(await taggingRuns(db)).toMatchObject([{
+    ok: true, seen: 1, new: 0, defaultedToUnknown: 0, error: null,
+  }]);
+  expect(await db.select().from(jobs)).toMatchObject([tags]);
 });

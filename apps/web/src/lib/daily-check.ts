@@ -48,7 +48,7 @@ async function checkTechJobsForGov(db: Db, startedAt: Date) {
  * Sends each untagged job to Gemini once. In its run row, `seen` counts jobs sent, `new`
  * counts jobs tagged, and `defaultedToUnknown` counts tagged jobs whose answer was unusable.
  * A failed request (network, timeout, or HTTP error) leaves its job untagged for the next
- * run, so `seen - new` is the failures; `error` keeps the first one.
+ * run; `error` keeps the first one.
  */
 async function tagUntaggedJobs(db: Db, checkStartedAt: Date, sleep: (ms: number) => Promise<unknown>) {
   const startedAt = new Date();
@@ -75,9 +75,15 @@ async function tagUntaggedJobs(db: Db, checkStartedAt: Date, sleep: (ms: number)
         signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error(`Gemini: HTTP ${response.status}`);
-      const answer: unknown = await response.json().catch(() => null);
+      const body = await response.text();
+      let answer: unknown;
+      try {
+        answer = JSON.parse(body);
+      } catch {
+        answer = null;
+      }
       const { tags, defaultedToUnknown: defaulted } = readTaggingAnswer(answer);
-      await saveJobTags(db, job.id, tags);
+      if (!await saveJobTags(db, job.id, tags)) continue;
       tagged++;
       if (defaulted) defaultedToUnknown++;
     } catch (cause) {

@@ -26,3 +26,16 @@ it("reads untagged jobs oldest first and keeps tags when the listing is saved ag
   expect(saved).toMatchObject({ ...tags, title: "Edited" });
   expect(saved!.taggedAt).toBeInstanceOf(Date);
 });
+
+it("does not overwrite tags on a second save", async () => {
+  const db = await createTestDb();
+  await saveJob(db, job("one", null));
+  const [untagged] = await readJobsToTag(db, 1);
+  const tags = { roleTags: ["security"], sectorTags: ["education"], seniority: "senior", summary: "Secures schools." };
+  expect(await saveJobTags(db, untagged!.id, tags)).toBe(true);
+  const [first] = await db.select().from(jobs);
+  expect(await saveJobTags(db, untagged!.id, {
+    roleTags: ["unknown"], sectorTags: ["unknown"], seniority: "unknown", summary: null,
+  })).toBe(false);
+  expect(await db.select().from(jobs)).toEqual([first]);
+});

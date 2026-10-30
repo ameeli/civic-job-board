@@ -9,7 +9,7 @@ const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${TA
 const GEMINI_TIMEOUT_MS = 20_000;
 /** No tagging request starts later than this after the run began, so it ends inside the 300 s limit. */
 const LAST_TAGGING_REQUEST_AFTER_MS = 260_000;
-/** Rate limited (429) or overloaded (503): retried after a wait, then tagging stops for the run. */
+/** Rate limited (429) or overloaded (503): failed recovery stops tagging for the run. */
 const RETRY_THEN_STOP_STATUSES = new Set([429, 503]);
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

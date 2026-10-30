@@ -1,4 +1,4 @@
-/** Gemini's cheapest free-tier Flash model: 10 requests/minute, 500/day as of 2026-10. */
+/** Tagging model; free-tier limits are documented in README.md#job-tags. */
 export const TAGGING_MODEL = "gemini-3.1-flash-lite";
 /** What fits in one 300-second daily run at one request every 6.5 seconds. */
 export const MAX_JOBS_TAGGED_PER_RUN = 35;

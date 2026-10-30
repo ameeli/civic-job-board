@@ -170,30 +170,35 @@ true only when every part succeeded. `runId` is the source check's
 ```
 
 `tagging.defaulted` counts tagged jobs whose answer defaulted to unknown, and
-`tagging.transient` counts jobs left untagged for the next run after a failed
-request. Only a run that throws (for example, the database is unreachable)
-answers HTTP 500.
+`tagging.transient` counts jobs whose requests failed after retries, plus
+selected jobs left unsent when recovery from a 429 or 503 fails. Jobs deferred
+only by the time budget are excluded. Only a run that throws (for example,
+the database is unreachable) answers HTTP 500.
 
 ### Job tags
 
 After the source check, the daily check sends untagged jobs to Gemini
 (`gemini-3.1-flash-lite`, free tier), one job per request, oldest posted first.
 Each request sends the title, employer, and the first 4,000 characters of the
-description, and stores 1-3 role tags, 1-3 sector tags, one seniority, and a
-one-sentence summary on the job, with `tagged_at` set. The fixed tag lists live
+description and asks for 1-3 role tags, 1-3 sector tags, one seniority, and a
+plain English sentence of 20 words or fewer. The accepted tags and summary
+are stored on the job, with `tagged_at` set. Summary length is not enforced
+when saving the answer. The fixed tag lists live
 in [`packages/core/src/job-tags.ts`](packages/core/src/job-tags.ts); Gemini's
 structured output schema enumerates them, and `unknown` is allowed in each.
 
 Each job's tags are saved once. A completed answer can tag the job even when
 unusable: off-list tags are dropped, a field with nothing valid left becomes
-`unknown`, and an empty summary is stored as null. Only a failed request
+`unknown`, and an empty summary is stored as null. A failed request
 (network error, timeout, or HTTP error such as 429 or 5xx), including a failure
-while reading the response body, leaves the job untagged for the next run.
+while reading the response body, or a failed tag save leaves the job untagged
+for the next run.
 An HTTP 429 (rate limited) or 503 (overloaded) retries the same job up to
 twice, waiting 30 then 60 seconds. A wait that would run past the run's time
-budget is not started. If recovery ends in any request failure, tagging stops for the rest of the
-run: that job and every remaining selected job stay untagged for the next run.
-Completed malformed answers default to unknown. Overlapping runs may send
+budget is not started. If recovery ends in any request failure, tagging stops
+for the rest of the run: that job and every remaining selected job stay
+untagged for the next run. Successful recovery continues the backlog and does
+not count as a failure. Overlapping runs may send
 duplicate requests, but saves only apply while `tagged_at` is null, so the
 first save wins and completed tags cannot be overwritten.
 
@@ -204,7 +209,8 @@ inside the 300-second limit. A backlog clears over several days. Each run writes
 a `source_runs` row with source `gemini-tagging`: `seen` is jobs sent, plus
 jobs left unsent after a 429 or 503 stop, `new` is
 jobs tagged, `defaulted_to_unknown` is tagged jobs whose answer lacked a valid
-role, sector, or seniority, and `error` is the first failed request. A save
+role, sector, or seniority, and `error` is the final error for the first job
+that failed after any applicable retries. A save
 skipped because another run already tagged the job counts toward neither
 `new` nor `defaulted_to_unknown`. Without
 `GEMINI_API_KEY`, the row records that tagging was skipped.

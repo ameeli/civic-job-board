@@ -284,7 +284,9 @@ UTC (on Hobby, timing is only accurate to the hour).
    curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/daily
    ```
 
-   Expect `HTTP/2 200` and `{"ok":true,"runId":1}`. The same request without
+   It takes up to about 5 minutes while it tags jobs. Expect `HTTP/2 200` and a
+   body starting `{"ok":true,"runId":1,` with `fetch` and `tagging` results
+   ([what they mean](../README.md#the-daily-check)). The same request without
    the header returns `401`.
 3. In the Neon Console, check the latest `source_runs` row and the saved jobs
    against the behavior described in [the README's daily check section](../README.md#the-daily-check).

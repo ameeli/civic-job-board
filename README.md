@@ -158,8 +158,21 @@ null when absent. A fetch, mapping, or save failure ends the source check and
 records the error, while earlier saves remain. After the check, the app
 writes one `source_runs` row with success/failure, jobs seen, new jobs, and any
 error. Empty results record success with zero seen, so the inbox banner can
-flag them later. Source failures return HTTP 502. The local curl command above
-runs this same function. Other sources come in later slices.
+flag them later. The local curl command above runs this same function. Other
+sources come in later slices.
+
+A completed run answers HTTP 200 with each part's result, and top-level `ok` is
+true only when every part succeeded. `runId` is the source check's
+`source_runs` row; `error` appears only on a failed part:
+
+```json
+{"ok":false,"runId":4,"fetch":{"ok":true,"seen":319,"new":0},"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
+```
+
+`tagging.defaulted` counts tagged jobs whose answer defaulted to unknown, and
+`tagging.transient` counts jobs left untagged for the next run after a failed
+request. Only a run that throws (for example, the database is unreachable)
+answers HTTP 500.
 
 ### Job tags
 
@@ -176,6 +189,11 @@ unusable: off-list tags are dropped, a field with nothing valid left becomes
 `unknown`, and an empty summary is stored as null. Only a failed request
 (network error, timeout, or HTTP error such as 429 or 5xx), including a failure
 while reading the response body, leaves the job untagged for the next run.
+An HTTP 429 (rate limited) or 503 (overloaded) retries the same job up to
+twice, waiting 30 then 60 seconds, or the response's `Retry-After` when present
+(at most 60 seconds). A wait that would run past the run's time budget is not
+started. If the job still cannot be sent, tagging stops for the rest of the
+run: that job and every remaining selected job stay untagged for the next run.
 Completed malformed answers default to unknown. Overlapping runs may send
 duplicate requests, but saves only apply while `tagged_at` is null, so the
 first save wins and completed tags cannot be overwritten.
@@ -184,13 +202,41 @@ The free tier allows 10 requests per minute and 500 per day (as of
 2026-10-30), so requests are 6.5 seconds apart, at most 35 jobs are tagged per
 run, and no request starts later than 260 seconds into the run, so it ends
 inside the 300-second limit. A backlog clears over several days. Each run writes
-a `source_runs` row with source `gemini-tagging`: `seen` is jobs sent, `new` is
+a `source_runs` row with source `gemini-tagging`: `seen` is jobs sent, plus
+jobs left unsent after a 429 or 503 stop, `new` is
 jobs tagged, `defaulted_to_unknown` is tagged jobs whose answer lacked a valid
 role, sector, or seniority, and `error` is the first failed request. A save
 skipped because another run already tagged the job counts toward neither
 `new` nor `defaulted_to_unknown`. Without
-`GEMINI_API_KEY`, the row records that tagging was skipped. The cron response
-reports only the source check.
+`GEMINI_API_KEY`, the row records that tagging was skipped.
+
+### Progress logs
+
+The daily check prints one line per step to the console, which Vercel keeps in
+the project's **Logs** (and `pnpm dev` prints in the terminal). Each line starts
+with `[daily-check]`, then an event name and `key=value` fields:
+
+```
+[daily-check] run-start
+[daily-check] source-start source=tech-jobs-for-gov
+[daily-check] source-done source=tech-jobs-for-gov ok=true fetched=319 saved=319 new=2 duration_ms=1653
+[daily-check] tagging-start selected=31 cap=35
+[daily-check] tagging-job n=1/31 job_id=<uuid> outcome=tagged attempts=1 duration_ms=1840
+[daily-check] tagging-retry job_id=<uuid> attempt=2 status=503 wait_s=30
+[daily-check] tagging-retry job_id=<uuid> attempt=3 status=503 wait_s=60
+[daily-check] tagging-job n=2/31 job_id=<uuid> outcome=transient-error status=503 error="Gemini: HTTP 503" attempts=3 duration_ms=91340
+[daily-check] tagging-stopped reason=overloaded status=503 untagged=29
+[daily-check] run-done fetched=319 new=2 tagged=1 defaulted_to_unknown=0 transient_failures=30 duration_ms=101020
+```
+
+A job's `outcome` is `tagged`, `defaulted-to-unknown`, `transient-error`, or
+`already-tagged` (an overlapping run saved it first). Each retry wait logs a
+`tagging-retry` line, and `tagging-retry-skipped` notes a wait that would have
+run past the time budget. `tagging-stopped` gives
+`reason=rate-limited`, `overloaded`, or `time-budget`; `tagging-skipped
+reason=missing-api-key` replaces the tagging lines when `GEMINI_API_KEY` is
+unset. Logs never include secrets, API keys, request headers, or job
+descriptions.
 
 Vercel Hobby plan limits that the daily run must fit in, as documented on
 2026-10-16:

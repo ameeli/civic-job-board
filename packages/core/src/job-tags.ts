@@ -4,6 +4,24 @@ export const TAGGING_MODEL = "gemini-3.1-flash-lite";
 export const MAX_JOBS_TAGGED_PER_RUN = 35;
 /** Keeps requests under the free tier's 10 per minute. */
 export const PAUSE_BETWEEN_TAGGING_REQUESTS_MS = 6_500;
+/** Waits before retrying a job after HTTP 429 or 503, one per retry. */
+export const TAGGING_RETRY_WAITS_S = [30, 60] as const;
+const MAX_RETRY_WAIT_S = 60;
+
+/**
+ * Seconds to wait before retry number `retry` (1-based): the server's Retry-After
+ * (seconds or an HTTP date) when present, else the default, never more than 60.
+ */
+export function taggingRetryWaitSeconds(retry: number, retryAfter: string | null, now = new Date()): number {
+  const fallback = TAGGING_RETRY_WAITS_S[retry - 1] ?? MAX_RETRY_WAIT_S;
+  if (!retryAfter?.trim()) return fallback;
+  const seconds = /^\d+$/.test(retryAfter.trim())
+    ? Number(retryAfter.trim())
+    : Math.ceil((Date.parse(retryAfter) - now.getTime()) / 1000);
+  if (Number.isNaN(seconds)) return fallback;
+  return Math.min(Math.max(seconds, 0), MAX_RETRY_WAIT_S);
+}
+
 /** source_runs.source for tagging runs, next to the job sources' own rows. */
 export const TAGGING_RUN_SOURCE = "gemini-tagging";
 const MAX_DESCRIPTION_CHARS = 4_000;

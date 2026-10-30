@@ -216,17 +216,60 @@ it.each([[429, "rate-limited"], [503, "overloaded"]])("retries twice, then stops
   expect(logLines().at(-1)).toMatch(/^\[daily-check\] run-done fetched=4 new=4 tagged=1 defaulted_to_unknown=0 transient_failures=3 duration_ms=\d+$/);
 });
 
-it("tags a job when a retry succeeds, waiting as long as Retry-After asks", async () => {
+it.each([429, 503].flatMap(status => [1, 2].map(retry => ({ status, retry }))))(
+  "continues the backlog after HTTP $status recovers on retry $retry", async ({ status, retry }) => {
+    const db = await createTestDb();
+    const gemini = vi.fn();
+    for (let attempt = 0; attempt < retry; attempt++) {
+      gemini.mockResolvedValueOnce(new Response("", { status }));
+    }
+    gemini.mockImplementation(async () => taggedAnswer());
+    fakeGeminiFor(fourListings.slice(0, 2), gemini);
+    const sleep = vi.fn(async () => {});
+
+    const { taggingRun, transientFailures } = await dailyCheck(db, { sleep });
+    expect(gemini).toHaveBeenCalledTimes(retry + 2);
+    expect(sleep.mock.calls).toEqual(retry === 1 ? [[30_000], [6_500]] : [[30_000], [60_000], [6_500]]);
+    expect(taggingRun).toMatchObject({ ok: true, seen: 2, new: 2, error: null });
+    expect(transientFailures).toBe(0);
+    expect(await readJobsToTag(db, 35)).toHaveLength(0);
+  },
+);
+
+it.each([429, 503].flatMap(status => [1, 2].flatMap(retry =>
+  ["http", "timeout", "transport", "body"].map(failure => ({ status, retry, failure })),
+)))("stops after HTTP $status recovery ends in $failure on retry $retry", async ({ status, retry, failure }) => {
   const db = await createTestDb();
-  const gemini = vi.fn().mockResolvedValueOnce(new Response("", { status: 429, headers: { "retry-after": "7" } }))
-    .mockImplementation(async () => taggedAnswer());
-  fakeGeminiFor([record], gemini);
+  const gemini = vi.fn();
+  for (let attempt = 0; attempt < retry; attempt++) {
+    gemini.mockResolvedValueOnce(new Response("", { status }));
+  }
+  const error = failure === "timeout" ? new DOMException("Timed out", "TimeoutError") : new TypeError("Connection reset");
+  if (failure === "http") {
+    gemini.mockResolvedValueOnce(new Response("", { status: 500 }));
+  } else if (failure === "body") {
+    gemini.mockResolvedValueOnce(new Response(new ReadableStream({
+      start(controller) { controller.error(error); },
+    })));
+  } else {
+    gemini.mockRejectedValueOnce(error);
+  }
+  gemini.mockImplementation(async () => taggedAnswer());
+  fakeGeminiFor(fourListings, gemini);
   const sleep = vi.fn(async () => {});
 
-  await dailyCheck(db, { sleep });
-  expect(sleep.mock.calls).toEqual([[7_000]]);
-  expect(await taggingRuns(db)).toMatchObject([{ ok: true, seen: 1, new: 1, error: null }]);
-  expect(logLines()).toContainEqual(expect.stringMatching(/ outcome=tagged attempts=2 duration_ms=\d+$/));
+  const { taggingRun, transientFailures } = await dailyCheck(db, { sleep });
+  expect(gemini).toHaveBeenCalledTimes(retry + 1);
+  expect(sleep.mock.calls).toEqual(retry === 1 ? [[30_000]] : [[30_000], [60_000]]);
+  expect(taggingRun).toMatchObject({
+    ok: false, seen: 4, new: 0, defaultedToUnknown: 0,
+    error: failure === "http" ? "Gemini: HTTP 500" : error.message,
+  });
+  expect(transientFailures).toBe(4);
+  expect(await readJobsToTag(db, 35)).toHaveLength(4);
+  expect(logLines()).toContainEqual(
+    `[daily-check] tagging-stopped reason=${status === 429 ? "rate-limited" : "overloaded"} status=${status} untagged=3`,
+  );
 });
 
 it("stops instead of starting a retry wait that would run past the time budget", async () => {

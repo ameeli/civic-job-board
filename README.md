@@ -190,9 +190,8 @@ unusable: off-list tags are dropped, a field with nothing valid left becomes
 (network error, timeout, or HTTP error such as 429 or 5xx), including a failure
 while reading the response body, leaves the job untagged for the next run.
 An HTTP 429 (rate limited) or 503 (overloaded) retries the same job up to
-twice, waiting 30 then 60 seconds, or the response's `Retry-After` when present
-(at most 60 seconds). A wait that would run past the run's time budget is not
-started. If the job still cannot be sent, tagging stops for the rest of the
+twice, waiting 30 then 60 seconds. A wait that would run past the run's time
+budget is not started. If recovery ends in any request failure, tagging stops for the rest of the
 run: that job and every remaining selected job stay untagged for the next run.
 Completed malformed answers default to unknown. Overlapping runs may send
 duplicate requests, but saves only apply while `tagged_at` is null, so the

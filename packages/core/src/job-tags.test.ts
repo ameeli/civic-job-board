@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildTaggingRequest, describeJobTags, readTaggingAnswer, ROLE_TAGS, SECTOR_TAGS, SENIORITY_LEVELS, taggingRetryWaitSeconds,
+  buildTaggingRequest, describeJobTags, readTaggingAnswer, ROLE_TAGS, SECTOR_TAGS, SENIORITY_LEVELS,
 } from "./job-tags";
 
 const geminiResponse = (text: string) => ({ candidates: [{ content: { parts: [{ text }] }, finishReason: "STOP" }] });
@@ -70,21 +70,4 @@ describe("readTaggingAnswer", () => {
 it("describes tags with their labels", () => {
   expect(describeJobTags({ roleTags: ["data-science-ai", "unknown"], sectorTags: ["finance-revenue"], seniority: "leadership" }))
     .toBe("Roles: Data science & AI, Unknown · Sectors: Finance & revenue · Seniority: Leadership");
-});
-
-describe("taggingRetryWaitSeconds", () => {
-  const now = new Date("2026-10-30T12:00:00Z");
-
-  it("waits 30 then 60 seconds without Retry-After", () => {
-    expect(taggingRetryWaitSeconds(1, null, now)).toBe(30);
-    expect(taggingRetryWaitSeconds(2, "", now)).toBe(60);
-  });
-
-  it("honors Retry-After seconds or dates, bounded to 0-60 seconds", () => {
-    expect(taggingRetryWaitSeconds(1, "12", now)).toBe(12);
-    expect(taggingRetryWaitSeconds(1, "600", now)).toBe(60);
-    expect(taggingRetryWaitSeconds(2, "Fri, 30 Oct 2026 12:00:20 GMT", now)).toBe(20);
-    expect(taggingRetryWaitSeconds(1, "Fri, 30 Oct 2026 11:00:00 GMT", now)).toBe(0);
-    expect(taggingRetryWaitSeconds(2, "soon", now)).toBe(60);
-  });
 });

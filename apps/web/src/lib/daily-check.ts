@@ -1,7 +1,7 @@
 import { fetchGovRecords, GOV_SOURCE, mapGovJob } from "@civic-job-board/core/tech-jobs-for-gov";
 import {
   buildTaggingRequest, MAX_JOBS_TAGGED_PER_RUN, PAUSE_BETWEEN_TAGGING_REQUESTS_MS, readTaggingAnswer,
-  TAGGING_MODEL, TAGGING_RETRY_WAITS_S, TAGGING_RUN_SOURCE, taggingRetryWaitSeconds,
+  TAGGING_MODEL, TAGGING_RETRY_WAITS_S, TAGGING_RUN_SOURCE,
 } from "@civic-job-board/core/job-tags";
 import { readJobsToTag, recordSourceRun, saveJob, saveJobTags, type Db } from "@civic-job-board/db";
 
@@ -72,7 +72,7 @@ async function checkTechJobsForGov(db: Db) {
 type JobToTag = Awaited<ReturnType<typeof readJobsToTag>>[number];
 type TaggingResult =
   | { outcome: "tagged" | "defaulted-to-unknown" | "already-tagged" }
-  | { outcome: "transient-error"; error: string; status: number | null; retryAfter: string | null };
+  | { outcome: "transient-error"; error: string; status: number | null };
 
 /** One Gemini request for one job, saved only if the job is still untagged. */
 async function tagJob(db: Db, apiKey: string, job: JobToTag): Promise<TaggingResult> {
@@ -86,7 +86,7 @@ async function tagJob(db: Db, apiKey: string, job: JobToTag): Promise<TaggingRes
     if (!response.ok) {
       return {
         outcome: "transient-error", error: `Gemini: HTTP ${response.status}`,
-        status: response.status, retryAfter: response.headers.get("retry-after"),
+        status: response.status,
       };
     }
     // Keep body-read failures outside the parse catch so interrupted responses remain retryable.
@@ -101,7 +101,7 @@ async function tagJob(db: Db, apiKey: string, job: JobToTag): Promise<TaggingRes
     if (!await saveJobTags(db, job.id, tags)) return { outcome: "already-tagged" };
     return { outcome: defaultedToUnknown ? "defaulted-to-unknown" : "tagged" };
   } catch (cause) {
-    return { outcome: "transient-error", error: errorMessage(cause), status: null, retryAfter: null };
+    return { outcome: "transient-error", error: errorMessage(cause), status: null };
   }
 }
 
@@ -135,16 +135,15 @@ async function tagUntaggedJobs(db: Db, checkStartedAt: Date, sleep: (ms: number)
     const jobStartedAt = Date.now();
     let result = await tagJob(db, apiKey, job);
     let attempt = 1;
-    let stopTagging = false;
+    const recoveryStatus = result.outcome === "transient-error" && result.status !== null
+      && RETRY_THEN_STOP_STATUSES.has(result.status) ? result.status : null;
     while (result.outcome === "transient-error" && result.status !== null && RETRY_THEN_STOP_STATUSES.has(result.status)) {
       if (attempt > TAGGING_RETRY_WAITS_S.length) {
-        stopTagging = true;
         break;
       }
-      const waitS = taggingRetryWaitSeconds(attempt, result.retryAfter);
+      const waitS = TAGGING_RETRY_WAITS_S[attempt - 1]!;
       if (elapsedMs() + waitS * 1000 > LAST_TAGGING_REQUEST_AFTER_MS) {
         log("tagging-retry-skipped", { job_id: job.id, status: result.status, wait_s: waitS, reason: "time-budget" });
-        stopTagging = true;
         break;
       }
       attempt++;
@@ -163,13 +162,13 @@ async function tagUntaggedJobs(db: Db, checkStartedAt: Date, sleep: (ms: number)
     if (result.outcome !== "transient-error") continue;
     transientFailures++;
     error ??= result.error;
-    if (stopTagging) {
+    if (recoveryStatus !== null) {
       // The jobs not sent stay untagged and count as transient failures too.
       const notSent = selected.length - index - 1;
       attempted += notSent;
       transientFailures += notSent;
       log("tagging-stopped", {
-        reason: result.status === 429 ? "rate-limited" : "overloaded", status: result.status, untagged: notSent,
+        reason: recoveryStatus === 429 ? "rate-limited" : "overloaded", status: recoveryStatus, untagged: notSent,
       });
       break;
     }

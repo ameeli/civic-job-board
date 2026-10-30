@@ -1,14 +1,11 @@
 import { isAuthorizedCronRequest } from "@civic-job-board/core";
-import { recordSourceRun } from "@civic-job-board/db";
+import { dailyCheck } from "@/lib/daily-check";
 import { getDb } from "@/lib/db";
 
 // Hobby plan maximum; see the README's "The daily check" section.
 export const maxDuration = 300;
 
-/**
- * Daily check, invoked by Vercel Cron (see vercel.json). There are no sources
- * yet, so it only records that the run happened.
- */
+/** Run the source check using the existing guarded cron entry point. */
 export async function GET(request: Request): Promise<Response> {
   if (
     !isAuthorizedCronRequest(
@@ -19,13 +16,6 @@ export async function GET(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const startedAt = new Date();
-  const run = await recordSourceRun(getDb(), {
-    source: "daily",
-    startedAt,
-    finishedAt: new Date(),
-    ok: true,
-  });
-
-  return Response.json({ ok: true, runId: run.id });
+  const run = await dailyCheck(getDb());
+  return Response.json({ ok: run.ok, runId: run.id }, { status: run.ok ? 200 : 502 });
 }

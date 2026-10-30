@@ -99,8 +99,8 @@ DATABASE_URL='<direct connection string>' pnpm db:migrate
 ```
 
 It ends with `migrations applied successfully!`. In the Neon Console, open
-**Tables** to see `users`, `sessions`, `accounts`, `verifications`, and
-`source_runs`.
+**Tables** and compare them with the table definitions in
+[`packages/db/src/schema.ts`](../packages/db/src/schema.ts).
 
 Running it again is safe: migrations that already ran are skipped. Run it again
 whenever a future change adds a migration, before that change is deployed. The
@@ -286,8 +286,8 @@ UTC (on Hobby, timing is only accurate to the hour).
 
    Expect `HTTP/2 200` and `{"ok":true,"runId":1}`. The same request without
    the header returns `401`.
-3. In the Neon Console, the `source_runs` table now has a row with
-   `source = daily` and `ok = true`.
+3. In the Neon Console, check the latest `source_runs` row and the saved jobs
+   against the behavior described in [the README's daily check section](../README.md#the-daily-check).
 4. The next day, check `source_runs` again for a row Vercel added between 12:00
    and 12:59 UTC, or use **View Logs** next to the job in **Cron Jobs**.
 

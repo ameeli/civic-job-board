@@ -1,3 +1,5 @@
+import { readJobs } from "@civic-job-board/db";
+import { getDb } from "@/lib/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAllowedSession } from "@/lib/auth";
@@ -9,6 +11,8 @@ export default async function HomePage() {
   if (!session) {
     redirect("/sign-in");
   }
+
+  const jobs = await readJobs(getDb());
 
   return (
     <>
@@ -26,8 +30,19 @@ export default async function HomePage() {
         </div>
       </header>
       <main className="home">
-        <h2>Inbox coming soon</h2>
-        <p>The inbox is still being designed.</p>
+        <h2>Saved jobs</h2>
+        {jobs.length ? (
+          <ul>
+            {jobs.map((job) => (
+              <li key={job.id}>
+                <a href={job.applyUrl || job.sourceUrl}>{job.title}</a>
+                <p>{job.employerName} · {job.source}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No jobs saved yet - run the daily check</p>
+        )}
       </main>
     </>
   );

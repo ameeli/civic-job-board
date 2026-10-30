@@ -117,8 +117,8 @@ export interface TaggingAnswer {
 /**
  * Reads a completed Gemini generateContent response. It never throws: off-list tags are
  * dropped, and anything missing or unreadable (malformed, truncated, blocked, or empty)
- * becomes "unknown" (or a null summary), so every completed answer tags the job once and
- * it is never sent again.
+ * becomes "unknown" (or a null summary). Persistence and retry behavior are documented
+ * in README.md#job-tags.
  */
 export function readTaggingAnswer(response: unknown): TaggingAnswer {
   let answer: Record<string, unknown> = {};

@@ -171,11 +171,14 @@ one-sentence summary on the job, with `tagged_at` set. The fixed tag lists live
 in [`packages/core/src/job-tags.ts`](packages/core/src/job-tags.ts); Gemini's
 structured output schema enumerates them, and `unknown` is allowed in each.
 
-Each job is tagged once. Every completed answer tags the job, even an unusable
-one: off-list tags are dropped, a field with nothing valid left becomes
+Each job's tags are saved once. A completed answer can tag the job even when
+unusable: off-list tags are dropped, a field with nothing valid left becomes
 `unknown`, and an empty summary is stored as null. Only a failed request
-(network error, timeout, or HTTP error such as 429 or 5xx) leaves the job
-untagged for the next run.
+(network error, timeout, or HTTP error such as 429 or 5xx), including a failure
+while reading the response body, leaves the job untagged for the next run.
+Completed malformed answers default to unknown. Overlapping runs may send
+duplicate requests, but saves only apply while `tagged_at` is null, so the
+first save wins and completed tags cannot be overwritten.
 
 The free tier allows 10 requests per minute and 500 per day (as of
 2026-10-30), so requests are 6.5 seconds apart, at most 35 jobs are tagged per
@@ -183,7 +186,9 @@ run, and no request starts later than 260 seconds into the run, so it ends
 inside the 300-second limit. A backlog clears over several days. Each run writes
 a `source_runs` row with source `gemini-tagging`: `seen` is jobs sent, `new` is
 jobs tagged, `defaulted_to_unknown` is tagged jobs whose answer lacked a valid
-role, sector, or seniority, and `error` is the first failed request. Without
+role, sector, or seniority, and `error` is the first failed request. A save
+skipped because another run already tagged the job counts toward neither
+`new` nor `defaulted_to_unknown`. Without
 `GEMINI_API_KEY`, the row records that tagging was skipped. The cron response
 reports only the source check.
 

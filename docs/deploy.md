@@ -269,23 +269,12 @@ If something goes wrong:
 
 ### The daily check
 
-[`apps/web/vercel.json`](../apps/web/vercel.json) schedules three cron jobs,
-each once a day, in UTC:
+See [the README's daily check section](../README.md#the-daily-check) for the
+fetch and tagging schedule, Pacific time offsets, and retry behavior. The exact
+UTC schedules live in [`apps/web/vercel.json`](../apps/web/vercel.json).
 
-| Schedule | Route | Runs between (UTC) | Pacific time |
-| --- | --- | --- | --- |
-| `0 8 * * *` | `/api/cron/fetch-jobs` | 08:00 and 08:59 | around midnight |
-| `0 11 * * *` | `/api/cron/tag-jobs` | 11:00 and 11:59 | around 3am |
-| `0 14 * * *` | `/api/cron/tag-jobs` | 14:00 and 14:59 | around 6am |
-
-On Hobby, timing is only accurate to the hour, so each job fires some time
-within its hour. The schedules are fixed in UTC, so the Pacific times hold in
-standard time (November to March); during daylight saving time each job runs
-an hour later (around 1am, 4am, and 7am). Either way, the board has its tags
-well before noon.
-
-1. In Vercel, open **Settings**, then **Cron Jobs**. All three jobs should be
-   listed with those schedules
+1. In Vercel, open **Settings**, then **Cron Jobs**. The jobs should match
+   `apps/web/vercel.json`
    ([Vercel: Managing cron jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs)).
 2. Run each route once yourself from a terminal, fetch first. `read -rs` keeps
    the secret out of your shell history; paste `CRON_SECRET` when it waits,

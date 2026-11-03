@@ -170,10 +170,10 @@ true only when every part succeeded. `runId` is the source check's
 ```
 
 `tagging.defaulted` counts tagged jobs whose answer defaulted to unknown, and
-`tagging.transient` counts jobs whose requests failed after retries, plus
-selected jobs left unsent when recovery from a 429 or 503 fails. Jobs deferred
-only by the time budget are excluded. Only a run that throws (for example,
-the database is unreachable) answers HTTP 500.
+`tagging.transient` counts jobs whose requests or tag saves failed after any
+applicable retries, plus selected jobs left unsent when recovery from a 429 or
+503 fails. Jobs deferred only by the time budget are excluded. Only a run that
+throws (for example, the database is unreachable) answers HTTP 500.
 
 ### Job tags
 
@@ -195,9 +195,9 @@ while reading the response body, or a failed tag save leaves the job untagged
 for the next run.
 An HTTP 429 (rate limited) or 503 (overloaded) retries the same job up to
 twice, waiting 30 then 60 seconds. A wait that would run past the run's time
-budget is not started. If recovery ends in any request failure, tagging stops
-for the rest of the run: that job and every remaining selected job stay
-untagged for the next run. Successful recovery continues the backlog and does
+budget is not started. If recovery ends in any request or tag-save failure,
+tagging stops for the rest of the run: that job and every remaining selected
+job stay untagged for the next run. Successful recovery continues the backlog and does
 not count as a failure. Overlapping runs may send
 duplicate requests, but saves only apply while `tagged_at` is null, so the
 first save wins and completed tags cannot be overwritten.

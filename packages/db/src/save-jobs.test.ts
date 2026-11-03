@@ -1,11 +1,18 @@
-import { expect, it } from "vitest";
+import { beforeEach, expect, it } from "vitest";
 import { saveJob } from "./save-jobs";
 import { eq } from "drizzle-orm";
 import { jobs } from "./schema";
 import { createTestDb } from "./testing";
+import type { Db } from "./source-runs";
+
+let db: Db;
+
+// Keep cold Postgres startup and migrations outside the behavior test timeout.
+beforeEach(async () => {
+  db = await createTestDb();
+});
 
 it("saves and updates the same source/id without replacing its identity", async () => {
-  const db = await createTestDb();
   const job = { source: "tech-jobs-for-gov", sourceJobId: "4296", title: "Engineer",
     employerName: "State", location: "Baton Rouge, LA", salary: "126252",
     description: "Description", applyUrl: "https://example.org/apply",

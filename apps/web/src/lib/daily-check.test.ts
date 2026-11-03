@@ -4,10 +4,14 @@ import { createTestDb } from "@civic-job-board/db/testing";
 import record from "../../../../packages/core/src/fixtures/gov-listing.json";
 import { dailyCheck } from "./daily-check";
 
+let db: Db;
+
 // Real Gemini is never called: tests without a fake Gemini run with no key.
-beforeEach(() => {
+beforeEach(async () => {
   vi.stubEnv("GEMINI_API_KEY", "");
   vi.spyOn(console, "log").mockImplementation(() => {});
+  // Keep cold Postgres startup and migrations outside the behavior test timeout.
+  db = await createTestDb();
 });
 
 afterEach(() => {
@@ -23,7 +27,6 @@ const taggingRuns = (db: Db) => runsOf(db, "gemini-tagging");
 const logLines = () => vi.mocked(console.log).mock.calls.map(([line]) => String(line));
 
 it("saves API application links, then updates missing links to null", async () => {
-  const db = await createTestDb();
   const fetcher = vi.fn().mockResolvedValueOnce(Response.json([{ ...record, meta: {
     _application: "https://example.org/?a=1&amp;b=2",
   } }]));
@@ -38,7 +41,6 @@ it("saves API application links, then updates missing links to null", async () =
 });
 
 it("records empty results and source failures for the banner", async () => {
-  const db = await createTestDb();
   vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json([]))
     .mockResolvedValueOnce(new Response("", { status: 503 })));
   expect((await dailyCheck(db)).sourceRun).toMatchObject({ ok: true, seen: 0, new: 0 });
@@ -47,7 +49,6 @@ it("records empty results and source failures for the banner", async () => {
 });
 
 it("retains successful saves and counts them when a later listing is invalid", async () => {
-  const db = await createTestDb();
   vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json([
     record, { ...record, id: null },
   ])));
@@ -59,7 +60,6 @@ it("retains successful saves and counts them when a later listing is invalid", a
 });
 
 it("records skipped tagging when GEMINI_API_KEY is unset while the source check still saves jobs", async () => {
-  const db = await createTestDb();
   const fetcher = vi.fn().mockResolvedValueOnce(Response.json([record]));
   vi.stubGlobal("fetch", fetcher);
   expect((await dailyCheck(db)).sourceRun).toMatchObject({ source: "tech-jobs-for-gov", ok: true, new: 1 });
@@ -70,7 +70,6 @@ it("records skipped tagging when GEMINI_API_KEY is unset while the source check 
 });
 
 it("tags each new job once with a fake Gemini and leaves failed requests for the next run", async () => {
-  const db = await createTestDb();
   vi.stubEnv("GEMINI_API_KEY", "test-key");
   const listings = [4296, 4297, 4298].map((id, day) => ({ ...record, id, date_gmt: `2026-10-0${day + 1}T00:00:00` }));
   const geminiAnswer = (fields: object) => Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify(fields) }] } }] });
@@ -119,7 +118,6 @@ it("tags each new job once with a fake Gemini and leaves failed requests for the
 });
 
 it("stops tagging when the run's time budget runs low", async () => {
-  const db = await createTestDb();
   vi.stubEnv("GEMINI_API_KEY", "test-key");
   vi.useFakeTimers({ toFake: ["Date"] });
   const gemini = vi.fn().mockResolvedValue(Response.json({}));
@@ -136,7 +134,6 @@ it.each([
   new DOMException("Body aborted", "AbortError"),
   new DOMException("Body timed out", "TimeoutError"),
 ])("retries jobs after response body read failure: %s", async failure => {
-  const db = await createTestDb();
   vi.stubEnv("GEMINI_API_KEY", "test-key");
   const interrupted = new Response(new ReadableStream({
     start(controller) { controller.error(failure); },
@@ -163,7 +160,6 @@ it.each([
 });
 
 it.each([true, false])("does not count a skipped tag save when the answer is unusable: %s", async unusable => {
-  const db = await createTestDb();
   vi.stubEnv("GEMINI_API_KEY", "test-key");
   const tags = { roleTags: ["security"], sectorTags: ["education"], seniority: "senior", summary: "Secures schools." };
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
@@ -195,7 +191,6 @@ function fakeGeminiFor(listings: object[], gemini: () => Promise<Response>) {
 const fourListings = [1, 2, 3, 4].map(id => ({ ...record, id, date_gmt: `2026-10-0${id}T00:00:00` }));
 
 it.each([[429, "rate-limited"], [503, "overloaded"]])("retries twice, then stops tagging for the run after HTTP %i", async (status, reason) => {
-  const db = await createTestDb();
   const gemini = vi.fn().mockResolvedValueOnce(taggedAnswer())
     .mockImplementation(async () => new Response("", { status }));
   fakeGeminiFor(fourListings, gemini);
@@ -218,7 +213,6 @@ it.each([[429, "rate-limited"], [503, "overloaded"]])("retries twice, then stops
 
 it.each([429, 503].flatMap(status => [1, 2].map(retry => ({ status, retry }))))(
   "continues the backlog after HTTP $status recovers on retry $retry", async ({ status, retry }) => {
-    const db = await createTestDb();
     const gemini = vi.fn();
     for (let attempt = 0; attempt < retry; attempt++) {
       gemini.mockResolvedValueOnce(new Response("", { status }));
@@ -239,7 +233,6 @@ it.each([429, 503].flatMap(status => [1, 2].map(retry => ({ status, retry }))))(
 it.each([429, 503].flatMap(status => [1, 2].flatMap(retry =>
   ["http", "timeout", "transport", "body"].map(failure => ({ status, retry, failure })),
 )))("stops after HTTP $status recovery ends in $failure on retry $retry", async ({ status, retry, failure }) => {
-  const db = await createTestDb();
   const gemini = vi.fn();
   for (let attempt = 0; attempt < retry; attempt++) {
     gemini.mockResolvedValueOnce(new Response("", { status }));
@@ -273,7 +266,6 @@ it.each([429, 503].flatMap(status => [1, 2].flatMap(retry =>
 });
 
 it("stops instead of starting a retry wait that would run past the time budget", async () => {
-  const db = await createTestDb();
   vi.useFakeTimers({ toFake: ["Date"] });
   const gemini = vi.fn().mockImplementation(async () => {
     vi.setSystemTime(Date.now() + 240_000);

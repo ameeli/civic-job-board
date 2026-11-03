@@ -48,6 +48,7 @@ You need:
 | Google client secret | Step 4 | Yes |
 | `BETTER_AUTH_SECRET` | Step 5 (you generate it) | Yes |
 | `CRON_SECRET` | Step 5 (you generate it) | Yes |
+| `GEMINI_API_KEY` | Step 5 (Google AI Studio) | Yes |
 
 ## Step 1: Create the Neon project
 
@@ -230,8 +231,7 @@ only the **Production** environment, and click **Save**.
 | `GOOGLE_CLIENT_ID` | The client ID from step 4. |
 | `GOOGLE_CLIENT_SECRET` | The client secret from step 4. |
 | `CRON_SECRET` | The value you generated above. Vercel sends it with every daily check, and the check refuses to run without it ([Vercel: Securing cron jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs)). |
-
-`GEMINI_API_KEY` is not used yet; skip it.
+| `GEMINI_API_KEY` | A free-tier key from [Google AI Studio](https://aistudio.google.com/apikey). The daily check uses it to tag jobs; without it, tagging is skipped. |
 
 Why only **Production**: Google accepts sign-ins only from the exact addresses
 in step 4, and each preview deployment gets its own changing address, so sign-in
@@ -284,11 +284,13 @@ UTC (on Hobby, timing is only accurate to the hour).
    curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/daily
    ```
 
-   Expect `HTTP/2 200` and `{"ok":true,"runId":1}`. The same request without
-   the header returns `401`.
-3. In the Neon Console, check the latest `source_runs` row and the saved jobs
+   It takes up to about 5 minutes while it tags jobs. Inspect the response
+   using [the README's daily check response contract](../README.md#the-daily-check);
+   HTTP 200 alone does not mean every part succeeded.
+   The same request without the authorization header returns `401`.
+3. In the Neon Console, check the latest `source_runs` rows and the saved jobs
    against the behavior described in [the README's daily check section](../README.md#the-daily-check).
-4. The next day, check `source_runs` again for a row Vercel added between 12:00
+4. The next day, check `source_runs` again for rows Vercel added between 12:00
    and 12:59 UTC, or use **View Logs** next to the job in **Cron Jobs**.
 
 ## Running the app on your computer

@@ -30,6 +30,7 @@ describe("recordSourceRun", () => {
       seen: 0,
       new: 0,
       error: null,
+      defaultedToUnknown: 0,
     });
     expect(await db.select().from(sourceRuns)).toEqual([row]);
   });

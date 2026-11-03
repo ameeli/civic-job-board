@@ -15,3 +15,4 @@ export { findUserById } from "./users";
 export { jobs, type NewJob } from "./schema";
 export { saveJob } from "./save-jobs";
 export { readJobs } from "./read-jobs";
+export { readJobsToTag, saveJobTags } from "./job-tags";

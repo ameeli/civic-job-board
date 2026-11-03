@@ -1,27 +1,18 @@
 import { fetchGovRecords, GOV_SOURCE, mapGovJob } from "@civic-job-board/core/tech-jobs-for-gov";
 import {
-  buildTaggingRequest, MAX_JOBS_TAGGED_PER_RUN, PAUSE_BETWEEN_TAGGING_REQUESTS_MS, readTaggingAnswer,
-  TAGGING_MODEL, TAGGING_RETRY_WAITS_S, TAGGING_RUN_SOURCE,
+  MAX_JOBS_TAGGED_PER_RUN, PAUSE_BETWEEN_TAGGING_REQUESTS_MS, TAGGING_RETRY_WAITS_S, TAGGING_RUN_SOURCE,
 } from "@civic-job-board/core/job-tags";
 import { readJobsToTag, recordSourceRun, saveJob, saveJobTags, type Db } from "@civic-job-board/db";
+import { logDailyCheck as log } from "./daily-check-log";
+import { errorMessage } from "./error-message";
+import { requestGeminiJobTags } from "./gemini-job-tags";
 
-const GEMINI_API = `https://generativelanguage.googleapis.com/v1beta/models/${TAGGING_MODEL}:generateContent`;
-const GEMINI_TIMEOUT_MS = 20_000;
 /** No tagging request starts later than this after the run began, so it ends inside the 300 s limit. */
 const LAST_TAGGING_REQUEST_AFTER_MS = 260_000;
 /** Rate limited (429) or overloaded (503): failed recovery stops tagging for the run. */
 const RETRY_THEN_STOP_STATUSES = new Set([429, 503]);
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-/** One progress line, `[daily-check] <event> key=value ...`; never pass secrets or job text. */
-function log(event: string, fields: Record<string, string | number | boolean | null> = {}) {
-  const pairs = Object.entries(fields).map(([key, value]) =>
-    `${key}=${typeof value === "string" && /[\s"=]/.test(value) ? JSON.stringify(value) : value}`);
-  console.log(["[daily-check]", event, ...pairs].join(" "));
-}
-
-const errorMessage = (cause: unknown) => cause instanceof Error ? cause.message : String(cause);
 
 /**
  * The source check, then Gemini tagging of untagged jobs. Each records its own
@@ -76,28 +67,10 @@ type TaggingResult =
 
 /** One Gemini request for one job, saved only if the job is still untagged. */
 async function tagJob(db: Db, apiKey: string, job: JobToTag): Promise<TaggingResult> {
+  const result = await requestGeminiJobTags(apiKey, job);
+  if (result.outcome === "transient-error") return result;
   try {
-    const response = await fetch(GEMINI_API, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify(buildTaggingRequest(job)),
-      signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
-    });
-    if (!response.ok) {
-      return {
-        outcome: "transient-error", error: `Gemini: HTTP ${response.status}`,
-        status: response.status,
-      };
-    }
-    // Keep body-read failures outside the parse catch so interrupted responses remain retryable.
-    const body = await response.text();
-    let answer: unknown;
-    try {
-      answer = JSON.parse(body);
-    } catch {
-      answer = null;
-    }
-    const { tags, defaultedToUnknown } = readTaggingAnswer(answer);
+    const { tags, defaultedToUnknown } = result.answer;
     if (!await saveJobTags(db, job.id, tags)) return { outcome: "already-tagged" };
     return { outcome: defaultedToUnknown ? "defaulted-to-unknown" : "tagged" };
   } catch (cause) {

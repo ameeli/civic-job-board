@@ -85,6 +85,21 @@ describe("GET /api/cron/daily", () => {
     });
   });
 
+  it("answers 200 with ok false when every part fails without throwing", async () => {
+    dailyCheck.mockResolvedValue({
+      sourceRun: { ...sourceRun, ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" },
+      taggingRun: { ok: false, new: 0, defaultedToUnknown: 0, error: "Gemini: HTTP 503" },
+      transientFailures: 35,
+    });
+    const response = await GET(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      ok: false, runId: 42,
+      fetch: { ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" },
+      tagging: { ok: false, tagged: 0, defaulted: 0, transient: 35, error: "Gemini: HTTP 503" },
+    });
+  });
+
   it("answers 500 when the run itself throws", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     dailyCheck.mockRejectedValue(new Error("database unreachable"));

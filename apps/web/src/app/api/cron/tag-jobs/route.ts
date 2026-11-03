@@ -1,11 +1,11 @@
 import { isAuthorizedCronRequest } from "@civic-job-board/core";
-import { dailyCheck } from "@/lib/daily-check";
+import { tagUntaggedJobs } from "@/lib/daily-check";
 import { getDb } from "@/lib/db";
 
 // Hobby plan maximum; see the README's "The daily check" section.
 export const maxDuration = 300;
 
-/** Runs the daily check behind the cron secret and reports each part. */
+/** Tags untagged jobs behind the cron secret and reports the tagging. */
 export async function GET(request: Request): Promise<Response> {
   if (
     !isAuthorizedCronRequest(
@@ -17,19 +17,15 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   try {
-    const { sourceRun, taggingRun, transientFailures } = await dailyCheck(getDb());
-    const fetch = {
-      ok: sourceRun.ok === true, seen: sourceRun.seen, new: sourceRun.new,
-      ...(sourceRun.error === null ? {} : { error: sourceRun.error }),
-    };
+    const { taggingRun, transientFailures } = await tagUntaggedJobs(getDb());
     const tagging = {
       ok: taggingRun.ok === true, tagged: taggingRun.new, defaulted: taggingRun.defaultedToUnknown,
       transient: transientFailures, ...(taggingRun.error === null ? {} : { error: taggingRun.error }),
     };
-    // A completed run answers 200 even when a part failed; the body says which part.
-    return Response.json({ ok: fetch.ok && tagging.ok, runId: sourceRun.id, fetch, tagging });
+    // A completed run answers 200 even when tagging failed; the body says so.
+    return Response.json({ ok: tagging.ok, runId: taggingRun.id, tagging });
   } catch (cause) {
-    console.error("[daily-check] run-failed", cause);
-    return Response.json({ ok: false, error: "The daily check failed; see the logs" }, { status: 500 });
+    console.error("[daily-check] tagging-run-failed", cause);
+    return Response.json({ ok: false, error: "Job tagging failed; see the logs" }, { status: 500 });
   }
 }

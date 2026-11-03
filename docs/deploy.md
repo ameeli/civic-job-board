@@ -269,29 +269,42 @@ If something goes wrong:
 
 ### The daily check
 
-[`apps/web/vercel.json`](../apps/web/vercel.json) schedules `GET /api/cron/daily`
-once a day at `0 12 * * *`, which Vercel runs some time between 12:00 and 12:59
-UTC (on Hobby, timing is only accurate to the hour).
+[`apps/web/vercel.json`](../apps/web/vercel.json) schedules three cron jobs,
+each once a day, in UTC:
 
-1. In Vercel, open **Settings**, then **Cron Jobs**. The `/api/cron/daily` job
-   should be listed with that schedule
+| Schedule | Route | Runs between (UTC) | Pacific time |
+| --- | --- | --- | --- |
+| `0 8 * * *` | `/api/cron/fetch-jobs` | 08:00 and 08:59 | around midnight |
+| `0 11 * * *` | `/api/cron/tag-jobs` | 11:00 and 11:59 | around 3am |
+| `0 14 * * *` | `/api/cron/tag-jobs` | 14:00 and 14:59 | around 6am |
+
+On Hobby, timing is only accurate to the hour, so each job fires some time
+within its hour. The schedules are fixed in UTC, so the Pacific times hold in
+standard time (November to March); during daylight saving time each job runs
+an hour later (around 1am, 4am, and 7am). Either way, the board has its tags
+well before noon.
+
+1. In Vercel, open **Settings**, then **Cron Jobs**. All three jobs should be
+   listed with those schedules
    ([Vercel: Managing cron jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs)).
-2. Run it once yourself from a terminal. `read -rs` keeps the secret out of
-   your shell history; paste `CRON_SECRET` when it waits, then press Enter:
+2. Run each route once yourself from a terminal, fetch first. `read -rs` keeps
+   the secret out of your shell history; paste `CRON_SECRET` when it waits,
+   then press Enter:
 
    ```sh
    read -rs CRON_SECRET
-   curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/daily
+   curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/fetch-jobs
+   curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/tag-jobs
    ```
 
-   It takes up to about 5 minutes while it tags jobs. Inspect the response
+   The tagging request takes up to about 5 minutes. Inspect each response
    using [the README's daily check response contract](../README.md#the-daily-check);
-   HTTP 200 alone does not mean every part succeeded.
-   The same request without the authorization header returns `401`.
+   HTTP 200 alone does not mean the run succeeded.
+   The same requests without the authorization header return `401`.
 3. In the Neon Console, check the latest `source_runs` rows and the saved jobs
    against the behavior described in [the README's daily check section](../README.md#the-daily-check).
-4. The next day, check `source_runs` again for rows Vercel added between 12:00
-   and 12:59 UTC, or use **View Logs** next to the job in **Cron Jobs**.
+4. The next day, check `source_runs` again for the rows the three jobs added,
+   or use **View Logs** next to each job in **Cron Jobs**.
 
 ## Running the app on your computer
 

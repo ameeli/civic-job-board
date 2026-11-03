@@ -36,7 +36,7 @@ used. GitHub Actions only runs CI.
 ### Repository layout
 
 ```
-apps/web/        Next.js app deployed to Vercel (sign-in, saved-jobs list, daily cron route)
+apps/web/        Next.js app deployed to Vercel (sign-in, saved-jobs list, daily cron routes)
 packages/core/   Source adapter, pure job mapping, job tag lists, and shared auth checks
 packages/db/     Drizzle schema, SQL migrations, and database helpers
 apps-script/     Placeholder for the future Gmail forwarding script
@@ -102,10 +102,11 @@ pnpm db:migrate
 ```
 
 To try the daily check locally (Vercel does not run crons in local dev), set
-`CRON_SECRET`, run the app, and call the route yourself:
+`CRON_SECRET`, run the app, and call the routes yourself, fetch first:
 
 ```sh
-curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/daily
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/fetch-jobs
+curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/tag-jobs
 ```
 
 ## Environment variables
@@ -145,10 +146,22 @@ lint, typecheck, tests, and a build on every pull request and push to `main`.
 
 ## The daily check
 
-[`apps/web/vercel.json`](apps/web/vercel.json) schedules one cron job that calls
-`GET /api/cron/daily` once a day (`0 12 * * *`, in UTC). The route checks the
-`CRON_SECRET` bearer header and calls `dailyCheck` to fetch Tech Jobs for Gov's
-WordPress API (all pages). It saves listings in `jobs`, updating by source and
+[`apps/web/vercel.json`](apps/web/vercel.json) schedules three daily cron jobs,
+each doing one thing in its own 300-second run (times in UTC):
+
+| Schedule | Route | Pacific standard time |
+| --- | --- | --- |
+| `0 8 * * *` | `GET /api/cron/fetch-jobs` | around midnight |
+| `0 11 * * *` | `GET /api/cron/tag-jobs` | around 3am |
+| `0 14 * * *` | `GET /api/cron/tag-jobs` | around 6am |
+
+Each fires some time within its hour, and during daylight saving time each
+runs an hour later in Pacific time. The second tagging run picks up jobs the
+first left untagged, for example after Gemini was overloaded. Untagged jobs
+still show in the list.
+
+Both routes check the `CRON_SECRET` bearer header. The fetch route calls
+`fetchAndSaveJobs` to fetch Tech Jobs for Gov's WordPress API (all pages). It saves listings in `jobs`, updating by source and
 source job id without deleting older jobs. Employer, location, and salary are
 kept as supplied by the API; salary is not parsed or converted. Posted dates
 use the API's UTC timestamp and deadlines retain the board's date text.
@@ -158,15 +171,17 @@ null when absent. A fetch, mapping, or save failure ends the source check and
 records the error, while earlier saves remain. After the check, the app
 writes one `source_runs` row with success/failure, jobs seen, new jobs, and any
 error. Empty results record success with zero seen, so the inbox banner can
-flag them later. The local curl command above runs this same function. Other
+flag them later. The local curl commands above run these same functions. Other
 sources come in later slices.
 
-A completed run answers HTTP 200 with each part's result, and top-level `ok` is
-true only when every part succeeded. `runId` is the source check's
-`source_runs` row; `error` appears only on a failed part:
+A completed run answers HTTP 200 with its part's result: `fetch` from the fetch
+route, `tagging` from the tagging route. Top-level `ok` is true only when that
+part succeeded, `runId` is the run's `source_runs` row, and `error` appears
+only on a failed part:
 
 ```json
-{"ok":false,"runId":4,"fetch":{"ok":true,"seen":319,"new":0},"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
+{"ok":true,"runId":4,"fetch":{"ok":true,"seen":319,"new":0}}
+{"ok":false,"runId":5,"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
 ```
 
 `tagging.defaulted` counts tagged jobs whose answer defaulted to unknown, and
@@ -177,7 +192,7 @@ throws (for example, the database is unreachable) answers HTTP 500.
 
 ### Job tags
 
-After the source check, the daily check sends untagged jobs to Gemini
+The tagging route sends untagged jobs to Gemini
 (`gemini-3.1-flash-lite`, free tier), one job per request, oldest posted first.
 Each request sends the title, employer, and the first 4,000 characters of the
 description and asks for 1-3 role tags, 1-3 sector tags, one seniority, and a
@@ -204,7 +219,7 @@ first save wins and completed tags cannot be overwritten.
 
 The free tier allows 10 requests per minute and 500 per day (as of
 2026-10-30), so requests are 6.5 seconds apart, at most 35 jobs are tagged per
-run, and no request starts later than 260 seconds into the run, so it ends
+run, and no request starts later than 260 seconds into tagging, so it ends
 inside the 300-second limit. A backlog clears over several days. Each run writes
 a `source_runs` row with source `gemini-tagging`: `seen` is jobs sent, plus
 jobs left unsent after a 429 or 503 stop, `new` is
@@ -219,10 +234,10 @@ skipped because another run already tagged the job counts toward neither
 
 The daily check prints one line per step to the console, which Vercel keeps in
 the project's **Logs** (and `pnpm dev` prints in the terminal). Each line starts
-with `[daily-check]`, then an event name and `key=value` fields:
+with `[daily-check]`, then an event name and `key=value` fields. The fetch run
+prints the `source-` lines and each tagging run the `tagging-` lines:
 
 ```
-[daily-check] run-start
 [daily-check] source-start source=tech-jobs-for-gov
 [daily-check] source-done source=tech-jobs-for-gov ok=true fetched=319 saved=319 new=2 duration_ms=1653
 [daily-check] tagging-start selected=31 cap=35
@@ -231,7 +246,7 @@ with `[daily-check]`, then an event name and `key=value` fields:
 [daily-check] tagging-retry job_id=<uuid> attempt=3 status=503 wait_s=60
 [daily-check] tagging-job n=2/31 job_id=<uuid> outcome=transient-error status=503 error="Gemini: HTTP 503" attempts=3 duration_ms=91340
 [daily-check] tagging-stopped reason=overloaded status=503 untagged=29
-[daily-check] run-done fetched=319 new=2 tagged=1 defaulted_to_unknown=0 transient_failures=30 duration_ms=101020
+[daily-check] tagging-done tagged=1 defaulted_to_unknown=0 transient_failures=30 duration_ms=101020
 ```
 
 A job's `outcome` is `tagged`, `defaulted-to-unknown`, `transient-error`, or
@@ -243,12 +258,14 @@ reason=missing-api-key` replaces the tagging lines when `GEMINI_API_KEY` is
 unset. Logs never include secrets, API keys, request headers, or job
 descriptions.
 
-Vercel Hobby plan limits that the daily run must fit in, as documented on
-2026-10-16:
+Vercel Hobby plan limits that each daily run must fit in, as documented on
+2026-10-16 (cron limits checked again on 2026-11-03):
 
 - **Cron frequency:** at most once per day per cron job; a more frequent
-  expression fails the deployment. Up to 100 cron jobs per project.
-  ([Usage & Pricing for Cron Jobs](https://vercel.com/docs/cron-jobs/usage-and-pricing))
+  expression fails the deployment. Up to 100 cron jobs per project, and
+  several may call the same path on different schedules.
+  ([Usage & Pricing for Cron Jobs](https://vercel.com/docs/cron-jobs/usage-and-pricing);
+  [Managing Cron Jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs#reading-the-cron-schedule-header))
 - **Timing:** precise only to the hour. `0 12 * * *` may run any time between
   12:00 and 12:59 UTC. ([same page](https://vercel.com/docs/cron-jobs/usage-and-pricing))
 - **Maximum function duration:** 300 seconds (5 minutes), which is both the
@@ -290,7 +307,8 @@ Only one person can sign in: the owner, with the Google account named in
 - **Protected by default.** [`apps/web/src/proxy.ts`](apps/web/src/proxy.ts)
   runs before every route. Without an allowed session, pages redirect to
   `/sign-in` and API routes answer `401`. Only `/sign-in`, Better Auth's own
-  routes under `/api/auth/`, and `/api/cron/daily` (which checks
+  routes under `/api/auth/`, and the cron routes `/api/cron/fetch-jobs` and
+  `/api/cron/tag-jobs` (which check
   `CRON_SECRET` itself) are public. Pages also check the session themselves.
 - **Per-user data.** The `users` table's `id` (a UUID) is what every per-user
   table will reference: stars, read marks, pipeline stages, notes, and

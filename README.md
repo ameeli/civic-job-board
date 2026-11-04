@@ -6,15 +6,16 @@ A personal, single-user app that checks civic job boards and newsletters once a
 day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
-locked to the owner's account, saves Tech Jobs for Gov listings on a daily
-check, tags each new job once with Gemini, and has CI. After sign-in, the home
-page shows a read-only list of saved jobs with their title, employer, and
-source, ordered by posted date, newest first, with undated jobs last; tagged
+locked to the owner's account, saves Tech Jobs for Gov and Civic Tech Field
+Guide listings on a daily check, tags each new job once with Gemini, and has CI.
+After sign-in, the home page shows a read-only list of saved jobs with their
+title, employer, and source, ordered by posted date, newest first, with undated jobs last; tagged
 jobs also show their role, sector, and seniority tags and a one-line summary.
 Titles link to the application link when present, otherwise to the source
-listing. With no saved jobs, it prompts you to run the daily check. Other
-sources and the full inbox UI are not built yet; screens and visual design are
-being prototyped separately.
+listing. With no saved jobs, it prompts you to run the daily check. When Civic
+Tech Field Guide jobs are listed, a line credits the Field Guide under its CC BY
+4.0 license. Other sources and the full inbox UI are not built yet; screens and
+visual design are being prototyped separately.
 
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).
 
@@ -37,7 +38,7 @@ used. GitHub Actions only runs CI.
 
 ```
 apps/web/        Next.js app deployed to Vercel (sign-in, saved-jobs list, daily cron routes)
-packages/core/   Source adapter, pure job mapping, job tag lists, and shared auth checks
+packages/core/   Source adapters, pure job mapping, job tag lists, and shared auth checks
 packages/db/     Drizzle schema, SQL migrations, and database helpers
 apps-script/     Placeholder for the future Gmail forwarding script
 ```
@@ -161,27 +162,41 @@ first left untagged, for example after Gemini was overloaded. Untagged jobs
 still show in the list.
 
 Both routes check the `CRON_SECRET` bearer header. The fetch route calls
-`fetchAndSaveJobs` to fetch Tech Jobs for Gov's WordPress API (all pages). It saves listings in `jobs`, updating by source and
-source job id without deleting older jobs. Employer, location, and salary are
-kept as supplied by the API; salary is not parsed or converted. Posted dates
-use the API's UTC timestamp and deadlines retain the board's date text.
+`fetchAndSaveJobs`, which checks each source in turn. Every source's check
+saves its listings in `jobs`, updating by source and source job id without
+deleting older jobs. A fetch, mapping, or save failure ends that source's check
+and records the error, while earlier saves remain and the next source is still
+checked. Each source's check then writes one `source_runs` row with
+success/failure, jobs seen, new jobs, and any error. Empty results record
+success with zero seen, so the inbox banner can flag them later. If writing a
+source's run row fails, the fetch stops and answers HTTP 500. The local curl
+commands above run these same functions. Other sources come in later slices.
 
-An apply link comes from `meta._application`, with HTML entities decoded, or is
-null when absent. A fetch, mapping, or save failure ends the source check and
-records the error, while earlier saves remain. After the check, the app
-writes one `source_runs` row with success/failure, jobs seen, new jobs, and any
-error. Empty results record success with zero seen, so the inbox banner can
-flag them later. The local curl commands above run these same functions. Other
-sources come in later slices.
+- **Tech Jobs for Gov** (`tech-jobs-for-gov`): its WordPress API, all pages.
+  Employer, location, and salary are kept as supplied by the API; salary is not
+  parsed or converted. Posted dates use the API's UTC timestamp and deadlines
+  retain the board's date text. An apply link comes from `meta._application`,
+  with HTML entities decoded, or is null when absent.
+- **Civic Tech Field Guide** (`civic-tech-field-guide`): the newest 100 items
+  of its official jobs feed as JSON
+  (`https://civictech.guide/api/v1/feed.json?kind=jobs&limit=100`), the same
+  items as its RSS feed with each job's fields kept apart. The title is the
+  role; employer, location, salary, and deadline are the board's text; the
+  apply link is the item's link and the source link is the job's Field Guide
+  page. The posted date is the day the job was added. The description holds the
+  board's other text: organization summary, organization type, categories, and
+  issues. The data is [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+  The feed allows 300 requests per minute; one check makes one request.
 
 A completed run answers HTTP 200 with its part's result: `fetch` from the fetch
-route, `tagging` from the tagging route. Top-level `ok` is true only when that
-part succeeded, `runId` is the run's `source_runs` row, and `error` appears
-only on a failed part:
+route, one entry per source, and `tagging` from the tagging route. Top-level
+`ok` is true only when every part succeeded. Each fetch entry has its own
+`runId`; the tagging route returns `runId` at the top level. Each identifies
+the corresponding `source_runs` row. `error` appears only on a failed part:
 
 ```json
-{"ok":true,"runId":4,"fetch":{"ok":true,"seen":319,"new":0}}
-{"ok":false,"runId":5,"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
+{"ok":false,"fetch":[{"source":"tech-jobs-for-gov","runId":4,"ok":true,"seen":319,"new":0},{"source":"civic-tech-field-guide","runId":5,"ok":false,"seen":0,"new":0,"error":"Civic Tech Field Guide feed: HTTP 429"}]}
+{"ok":false,"runId":6,"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
 ```
 
 `tagging.defaulted` counts tagged jobs whose answer defaulted to unknown, and
@@ -240,6 +255,8 @@ prints the `source-` lines and each tagging run the `tagging-` lines:
 ```
 [daily-check] source-start source=tech-jobs-for-gov
 [daily-check] source-done source=tech-jobs-for-gov ok=true fetched=319 saved=319 new=2 duration_ms=1653
+[daily-check] source-start source=civic-tech-field-guide
+[daily-check] source-done source=civic-tech-field-guide ok=true fetched=100 saved=100 new=3 duration_ms=870
 [daily-check] tagging-start selected=31 cap=35
 [daily-check] tagging-job n=1/31 job_id=<uuid> outcome=tagged attempts=1 duration_ms=1840
 [daily-check] tagging-retry job_id=<uuid> attempt=2 status=503 wait_s=30

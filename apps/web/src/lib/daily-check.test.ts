@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { jobs, readJobsToTag, saveJobTags, sourceRuns, type Db } from "@civic-job-board/db";
+import { jobs, readJobs, readJobsToTag, saveJobTags, sourceRuns, type Db } from "@civic-job-board/db";
 import { createTestDb } from "@civic-job-board/db/testing";
 import record from "../../../../packages/core/src/fixtures/gov-listing.json";
+import ctfgFeed from "../../../../packages/core/src/fixtures/civic-tech-field-guide-feed.json";
 import { fetchAndSaveJobs, tagUntaggedJobs } from "./daily-check";
 
 let db: Db;
@@ -23,8 +24,24 @@ afterEach(() => {
 
 const runsOf = async (db: Db, source: string) => (await db.select().from(sourceRuns).orderBy(sourceRuns.id)).filter(run => run.source === source);
 const govRuns = (db: Db) => runsOf(db, "tech-jobs-for-gov");
+const ctfgRuns = (db: Db) => runsOf(db, "civic-tech-field-guide");
 const taggingRuns = (db: Db) => runsOf(db, "gemini-tagging");
 const logLines = () => vi.mocked(console.log).mock.calls.map(([line]) => String(line));
+
+type FakeRequest = (url: string, init?: RequestInit) => Promise<Response>;
+const emptyCtfgFeed: FakeRequest = async () => Response.json({ items: [] });
+const noGemini: FakeRequest = async () => { throw new Error("Unexpected Gemini request"); };
+
+/** Fakes every request the daily check makes: each source, then Gemini. */
+function fakeRequests({ gov, ctfg = emptyCtfgFeed, gemini = noGemini }: {
+  gov: FakeRequest; ctfg?: FakeRequest; gemini?: FakeRequest;
+}) {
+  vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => {
+    if (url.startsWith("https://civicworkstudio.com/")) return gov(url, init);
+    if (url.startsWith("https://civictech.guide/")) return ctfg(url, init);
+    return gemini(url, init);
+  }));
+}
 
 /** The fetch cron, then a tagging cron, as they run each night. */
 async function fetchThenTag(db: Db, options?: Parameters<typeof tagUntaggedJobs>[1]) {
@@ -33,45 +50,96 @@ async function fetchThenTag(db: Db, options?: Parameters<typeof tagUntaggedJobs>
 }
 
 it("saves API application links, then updates missing links to null", async () => {
-  const fetcher = vi.fn().mockResolvedValueOnce(Response.json([{ ...record, meta: {
+  const gov = vi.fn().mockResolvedValueOnce(Response.json([{ ...record, meta: {
     _application: "https://example.org/?a=1&amp;b=2",
   } }]));
-  vi.stubGlobal("fetch", fetcher);
-  expect(await fetchAndSaveJobs(db)).toMatchObject({ source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1, error: null });
+  fakeRequests({ gov });
+  expect(await fetchAndSaveJobs(db)).toMatchObject([
+    { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1, error: null },
+    { source: "civic-tech-field-guide", ok: true, seen: 0, new: 0, error: null },
+  ]);
   expect(await db.select().from(jobs)).toMatchObject([{ applyUrl: "https://example.org/?a=1&b=2" }]);
-  fetcher.mockResolvedValueOnce(Response.json([{ ...record, meta: {}, _job_salary: "Competitive" }]));
-  expect(await fetchAndSaveJobs(db)).toMatchObject({ ok: true, seen: 1, new: 0 });
-  expect(fetcher).toHaveBeenCalledTimes(2);
+  gov.mockResolvedValueOnce(Response.json([{ ...record, meta: {}, _job_salary: "Competitive" }]));
+  expect(await fetchAndSaveJobs(db)).toMatchObject([{ ok: true, seen: 1, new: 0 }, { ok: true }]);
+  expect(gov).toHaveBeenCalledTimes(2);
   expect(await db.select().from(jobs)).toMatchObject([{ salary: "Competitive", applyUrl: null }]);
   expect(await govRuns(db)).toHaveLength(2);
   expect(await taggingRuns(db)).toHaveLength(0);
 });
 
 it("records empty results and source failures for the banner", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json([]))
-    .mockResolvedValueOnce(new Response("", { status: 503 })));
-  expect(await fetchAndSaveJobs(db)).toMatchObject({ ok: true, seen: 0, new: 0 });
-  expect(await fetchAndSaveJobs(db)).toMatchObject({ ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" });
+  fakeRequests({ gov: vi.fn().mockResolvedValueOnce(Response.json([]))
+    .mockResolvedValueOnce(new Response("", { status: 503 })) });
+  expect(await fetchAndSaveJobs(db)).toMatchObject([{ ok: true, seen: 0, new: 0 }, { ok: true, seen: 0 }]);
+  expect(await fetchAndSaveJobs(db)).toMatchObject([
+    { ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" }, { ok: true },
+  ]);
   expect(await govRuns(db)).toHaveLength(2);
 });
 
 it("retains successful saves and counts them when a later listing is invalid", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json([
-    record, { ...record, id: null },
-  ])));
-  expect(await fetchAndSaveJobs(db)).toMatchObject({
-    ok: false, seen: 2, new: 1, error: "Invalid Tech Jobs for Gov listing",
-  });
+  fakeRequests({ gov: async () => Response.json([record, { ...record, id: null }]) });
+  expect(await fetchAndSaveJobs(db)).toMatchObject([
+    { ok: false, seen: 2, new: 1, error: "Invalid Tech Jobs for Gov listing" }, { ok: true },
+  ]);
   expect(await db.select().from(jobs)).toHaveLength(1);
   expect(await govRuns(db)).toHaveLength(1);
 });
 
+it("saves Civic Tech Field Guide jobs and tags them with their employer", async () => {
+  vi.stubEnv("GEMINI_API_KEY", "test-key");
+  const gemini = vi.fn<FakeRequest>(async () => taggedAnswer());
+  fakeRequests({ gov: async () => Response.json([record]), ctfg: async () => Response.json(ctfgFeed), gemini });
+
+  expect(await fetchAndSaveJobs(db)).toMatchObject([
+    { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
+    { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2, error: null },
+  ]);
+  // Both Field Guide jobs were added the same day, so the list's order between them is arbitrary.
+  const listed = await readJobs(db);
+  expect(listed).toHaveLength(3);
+  expect(listed).toEqual(expect.arrayContaining([
+    expect.objectContaining({ title: "Senior DevOps Engineer", source: "tech-jobs-for-gov" }),
+    expect.objectContaining({
+      title: "Associate Director, Strategy", employerName: "Wellcome Trust", source: "civic-tech-field-guide",
+      applyUrl: expect.stringContaining("myworkdayjobs.com"), sourceUrl: "https://app.civictech.guide/job?recordId=recbyxPQel9RAHEV3",
+    }),
+    expect.objectContaining({ title: "Vice President, Head of Trust & Safety", employerName: "Lego Digital Play", source: "civic-tech-field-guide" }),
+  ]));
+
+  await tagUntaggedJobs(db, { sleep: async () => {} });
+  expect(gemini).toHaveBeenCalledTimes(3);
+  const prompts = gemini.mock.calls.map(([, init]) => String(init?.body));
+  expect(prompts).toContainEqual(expect.stringContaining("Wellcome Trust"));
+  expect(await taggingRuns(db)).toMatchObject([{ ok: true, seen: 3, new: 3 }]);
+
+  expect(await fetchAndSaveJobs(db)).toMatchObject([{ new: 0 }, { ok: true, seen: 2, new: 0 }]);
+  expect(await db.select().from(jobs)).toHaveLength(3);
+});
+
+it("checks the Field Guide even when Tech Jobs for Gov fails, and records each source's run", async () => {
+  fakeRequests({
+    gov: async () => new Response("", { status: 503 }),
+    ctfg: vi.fn().mockResolvedValueOnce(Response.json(ctfgFeed)).mockResolvedValueOnce(new Response("", { status: 429 })),
+  });
+  expect(await fetchAndSaveJobs(db)).toMatchObject([
+    { source: "tech-jobs-for-gov", ok: false, error: "Tech Jobs for Gov API: HTTP 503" },
+    { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2 },
+  ]);
+  expect(await fetchAndSaveJobs(db)).toMatchObject([
+    { ok: false }, { source: "civic-tech-field-guide", ok: false, seen: 0, error: "Civic Tech Field Guide feed: HTTP 429" },
+  ]);
+  expect(await govRuns(db)).toHaveLength(2);
+  expect(await ctfgRuns(db)).toHaveLength(2);
+  expect(await db.select().from(jobs)).toHaveLength(2);
+});
+
 it("records skipped tagging when GEMINI_API_KEY is unset while the source check still saves jobs", async () => {
-  const fetcher = vi.fn().mockResolvedValueOnce(Response.json([record]));
-  vi.stubGlobal("fetch", fetcher);
-  expect(await fetchAndSaveJobs(db)).toMatchObject({ source: "tech-jobs-for-gov", ok: true, new: 1 });
+  const gov = vi.fn().mockResolvedValueOnce(Response.json([record]));
+  fakeRequests({ gov });
+  expect(await fetchAndSaveJobs(db)).toMatchObject([{ source: "tech-jobs-for-gov", ok: true, new: 1 }, { ok: true }]);
   await tagUntaggedJobs(db);
-  expect(fetcher).toHaveBeenCalledOnce();
+  expect(fetch).toHaveBeenCalledTimes(2);
   expect(await taggingRuns(db)).toMatchObject([{ ok: false, seen: 0, new: 0, error: "GEMINI_API_KEY is not set; tagging skipped" }]);
   expect(logLines()).toContainEqual("[daily-check] tagging-skipped reason=missing-api-key");
   expect(await db.select().from(jobs)).toMatchObject([{ roleTags: null, taggedAt: null }]);
@@ -86,8 +154,7 @@ it("tags each new job once with a fake Gemini and leaves failed requests for the
     .mockResolvedValueOnce(new Response("", { status: 500 }))
     .mockResolvedValueOnce(Response.json({ candidates: [{ content: { parts: [{ text: '{"roleTags": [' }] }, finishReason: "MAX_TOKENS" }] }))
     .mockResolvedValueOnce(geminiAnswer({ roleTags: ["security"], sectorTags: ["unknown"], seniority: "mid", summary: "Secures systems." }));
-  vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => url.startsWith("https://civicworkstudio.com/")
-    ? Promise.resolve(Response.json(listings)) : gemini(url, init)));
+  fakeRequests({ gov: async () => Response.json(listings), gemini });
   const sleep = vi.fn(async () => {});
 
   await fetchThenTag(db, { sleep });
@@ -100,6 +167,8 @@ it("tags each new job once with a fake Gemini and leaves failed requests for the
   expect(logLines()).toEqual([
     "[daily-check] source-start source=tech-jobs-for-gov",
     expect.stringMatching(/^\[daily-check\] source-done source=tech-jobs-for-gov ok=true fetched=3 saved=3 new=3 duration_ms=\d+$/),
+    "[daily-check] source-start source=civic-tech-field-guide",
+    expect.stringMatching(/^\[daily-check\] source-done source=civic-tech-field-guide ok=true fetched=0 saved=0 new=0 duration_ms=\d+$/),
     "[daily-check] tagging-start selected=3 cap=35",
     expect.stringMatching(new RegExp(`^\\[daily-check\\] tagging-job n=1/3 job_id=${jobA} outcome=tagged attempts=1 duration_ms=\\d+$`)),
     expect.stringMatching(new RegExp(`^\\[daily-check\\] tagging-job n=2/3 job_id=${jobB} outcome=transient-error status=500 error="Gemini: HTTP 500" attempts=1 duration_ms=\\d+$`)),
@@ -128,8 +197,7 @@ it("stops tagging when the run's time budget runs low", async () => {
   vi.stubEnv("GEMINI_API_KEY", "test-key");
   vi.useFakeTimers({ toFake: ["Date"] });
   const gemini = vi.fn().mockResolvedValue(Response.json({}));
-  vi.stubGlobal("fetch", vi.fn((url: string) => url.startsWith("https://civicworkstudio.com/")
-    ? Promise.resolve(Response.json([record, { ...record, id: 2 }])) : gemini()));
+  fakeRequests({ gov: async () => Response.json([record, { ...record, id: 2 }]), gemini });
   await fetchThenTag(db, { sleep: async () => vi.setSystemTime(Date.now() + 261_000) });
   expect(gemini).toHaveBeenCalledOnce();
   expect(logLines()).toContainEqual("[daily-check] tagging-stopped reason=time-budget untagged=1");
@@ -146,8 +214,7 @@ it.each([
     start(controller) { controller.error(failure); },
   }));
   const gemini = vi.fn().mockResolvedValueOnce(interrupted).mockResolvedValueOnce(new Response("invalid JSON"));
-  vi.stubGlobal("fetch", vi.fn((url: string) => url.startsWith("https://civicworkstudio.com/")
-    ? Promise.resolve(Response.json([record])) : gemini()));
+  fakeRequests({ gov: async () => Response.json([record]), gemini });
 
   await fetchThenTag(db);
   expect(await db.select().from(jobs)).toMatchObject([{ taggedAt: null, roleTags: null }]);
@@ -169,14 +236,13 @@ it.each([
 it.each([true, false])("does not count a skipped tag save when the answer is unusable: %s", async unusable => {
   vi.stubEnv("GEMINI_API_KEY", "test-key");
   const tags = { roleTags: ["security"], sectorTags: ["education"], seniority: "senior", summary: "Secures schools." };
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    if (url.startsWith("https://civicworkstudio.com/")) return Response.json([record]);
+  fakeRequests({ gov: async () => Response.json([record]), gemini: async () => {
     const [pending] = await readJobsToTag(db, 1);
     await saveJobTags(db, pending!.id, tags);
     return Response.json(unusable ? {} : { candidates: [{ content: { parts: [{ text: JSON.stringify({
       ...tags, roleTags: ["software-engineering"],
     }) }] } }] });
-  }));
+  } });
 
   await fetchThenTag(db);
   expect(await taggingRuns(db)).toMatchObject([{
@@ -191,8 +257,7 @@ const taggedAnswer = () => Response.json({ candidates: [{ content: { parts: [{ t
 
 function fakeGeminiFor(listings: object[], gemini: () => Promise<Response>) {
   vi.stubEnv("GEMINI_API_KEY", "test-key");
-  vi.stubGlobal("fetch", vi.fn((url: string) => url.startsWith("https://civicworkstudio.com/")
-    ? Promise.resolve(Response.json(listings)) : gemini()));
+  fakeRequests({ gov: async () => Response.json(listings), gemini });
 }
 
 const fourListings = [1, 2, 3, 4].map(id => ({ ...record, id, date_gmt: `2026-10-0${id}T00:00:00` }));

@@ -1,11 +1,13 @@
+import { CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgJob } from "@civic-job-board/core/civic-tech-field-guide";
 import { fetchGovRecords, GOV_SOURCE, mapGovJob } from "@civic-job-board/core/tech-jobs-for-gov";
 import {
   MAX_JOBS_TAGGED_PER_RUN, PAUSE_BETWEEN_TAGGING_REQUESTS_MS, TAGGING_RETRY_WAITS_S, TAGGING_RUN_SOURCE,
 } from "@civic-job-board/core/job-tags";
-import { readJobsToTag, recordSourceRun, saveJob, saveJobTags, type Db } from "@civic-job-board/db";
+import { readJobsToTag, recordSourceRun, saveJobTags, type Db } from "@civic-job-board/db";
 import { logDailyCheck as log } from "./daily-check-log";
 import { errorMessage } from "./error-message";
 import { requestGeminiJobTags } from "./gemini-job-tags";
+import { saveSourceJobs } from "./save-source-jobs";
 
 /** No tagging request starts later than this after tagging began, so it ends inside the 300 s limit. */
 const LAST_TAGGING_REQUEST_AFTER_MS = 260_000;
@@ -15,35 +17,15 @@ const RETRY_THEN_STOP_STATUSES = new Set([429, 503]);
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Fetches Tech Jobs for Gov and saves its listings, then records the check's
- * source_runs row and returns it. Successful saves remain if a later listing fails.
+ * Checks every job source in turn and returns their source_runs rows. Each
+ * source records its own run; fetch, mapping, and job-save failures are isolated
+ * by saveSourceJobs. Failure to record a run stops the remaining checks.
  */
 export async function fetchAndSaveJobs(db: Db) {
-  const startedAt = new Date();
-  log("source-start", { source: GOV_SOURCE });
-  let seen = 0;
-  let saved = 0;
-  let newJobs = 0;
-  let error: string | null = null;
-  try {
-    const records = await fetchGovRecords();
-    seen = records.length;
-    for (const record of records) {
-      const job = mapGovJob(record);
-      if (await saveJob(db, job)) newJobs++;
-      saved++;
-    }
-  } catch (cause) {
-    error = errorMessage(cause);
-  }
-  log("source-done", {
-    source: GOV_SOURCE, ok: error === null, fetched: seen, saved, new: newJobs,
-    ...(error === null ? {} : { error }), duration_ms: Date.now() - startedAt.getTime(),
-  });
-  return recordSourceRun(db, {
-    source: GOV_SOURCE, startedAt, finishedAt: new Date(),
-    ok: error === null, seen, new: newJobs, error,
-  });
+  return [
+    await saveSourceJobs(db, GOV_SOURCE, fetchGovRecords, mapGovJob),
+    await saveSourceJobs(db, CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgJob),
+  ];
 }
 
 type JobToTag = Awaited<ReturnType<typeof readJobsToTag>>[number];

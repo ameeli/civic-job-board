@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./tech-jobs-for-gov": "./src/tech-jobs-for-gov.ts",
+    "./civic-tech-field-guide": "./src/civic-tech-field-guide.ts",
     "./job-tags": "./src/job-tags.ts"
   },
   "scripts": {

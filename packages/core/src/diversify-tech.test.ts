@@ -4,8 +4,8 @@ import {
   fetchDiversifyJobPages, mapDiversifyListing, readJobPageUrls, readJobRecord, type DiversifyJob,
 } from "./diversify-tech";
 
-// Live captures, 2026-11-04: the jobs sitemap trimmed to two jobs, and one job
-// page trimmed to the job record's fields the parser reads.
+// Live captures, 2026-11-04, trimmed to what the parser reads: the jobs sitemap
+// cut to two jobs' page links, and one job page cut to its job record's fields.
 const sitemap = readFileSync(new URL("./fixtures/diversify-tech-sitemap-jobs.xml", import.meta.url), "utf8");
 const jobPage = readFileSync(new URL("./fixtures/diversify-tech-job-page.html", import.meta.url), "utf8");
 const job = readJobRecord(jobPage);

@@ -292,7 +292,7 @@ UTC schedules live in [`apps/web/vercel.json`](../apps/web/vercel.json).
    The same requests without the authorization header return `401`.
 3. In the Neon Console, check the latest `source_runs` rows and the saved jobs
    against the behavior described in [the README's daily check section](../README.md#the-daily-check).
-4. The next day, check `source_runs` again for the rows the three jobs added,
+4. The next day, check `source_runs` again for the rows the scheduled runs added,
    or use **View Logs** next to each job in **Cron Jobs**.
 
 ## Running the app on your computer

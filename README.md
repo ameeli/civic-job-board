@@ -164,7 +164,7 @@ still show in the list.
 Both routes check the `CRON_SECRET` bearer header. The fetch route calls
 `fetchAndSaveJobs`, which checks each source in turn. Every source's check
 saves each listing in `job_listings`, by source and source job id, pointing at
-its job in `jobs`, without deleting older listings or jobs. Listings with
+its job in `jobs`, retaining listings that disappear from a board. Listings with
 exactly the same apply link and title, from any source or reposted on one
 board, are one job, which shows the text of the listing saved last; a listing
 with no apply link is always a job of its own. A board's edit to a listing

@@ -1,7 +1,9 @@
-export { createDb } from "./client";
+export { createDb, type Db } from "./client";
 export {
   accounts,
   authSchema,
+  jobListings,
+  jobs,
   sessions,
   sourceRuns,
   users,
@@ -10,9 +12,8 @@ export {
   type SourceRun,
   type User,
 } from "./schema";
-export { recordSourceRun, type Db } from "./source-runs";
+export { recordSourceRun } from "./source-runs";
 export { findUserById } from "./users";
-export { jobs, type NewJob } from "./schema";
-export { saveJob } from "./save-jobs";
+export { saveListing, type JobListing } from "./save-listing";
 export { readJobs } from "./read-jobs";
 export { readJobsToTag, saveJobTags } from "./job-tags";

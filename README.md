@@ -9,7 +9,7 @@ This repository is currently a **skeleton**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov and Civic Tech Field
 Guide listings on a daily check, tags each new job once with Gemini, and has CI.
 After sign-in, the home page shows a read-only list of saved jobs with their
-title, employer, and source, ordered by posted date, newest first, with undated jobs last; tagged
+title, employer, and sources, ordered by posted date, newest first, with undated jobs last; tagged
 jobs also show their role, sector, and seniority tags and a one-line summary.
 Titles link to the application link when present, otherwise to the source
 listing. With no saved jobs, it prompts you to run the daily check. When Civic
@@ -163,11 +163,18 @@ still show in the list.
 
 Both routes check the `CRON_SECRET` bearer header. The fetch route calls
 `fetchAndSaveJobs`, which checks each source in turn. Every source's check
-saves its listings in `jobs`, updating by source and source job id without
-deleting older jobs. A fetch, mapping, or save failure ends that source's check
+saves each listing in `job_listings`, by source and source job id, pointing at
+its job in `jobs`, retaining listings that disappear from a board. Listings with
+exactly the same apply link and title, from any source or reposted on one
+board, are one job, which shows the text of the listing saved last; a listing
+with no apply link is always a job of its own. A board's edit to a listing
+updates its job in place, or moves the listing to the job it now matches.
+When a listing leaves a shared job (for example after its title changes), the job left behind keeps showing the moved listing's text until a remaining listing is saved again, normally on that source's next successful daily fetch. A
+fetch, mapping, or save failure ends that source's check
 and records the error, while earlier saves remain and the next source is still
 checked. Each source's check then writes one `source_runs` row with
-success/failure, jobs seen, new jobs, and any error. Empty results record
+success/failure, listings seen, new jobs (a listing that joins an existing job
+is not new), and any error. Empty results record
 success with zero seen, so the inbox banner can flag them later. If writing a
 source's run row fails, the fetch stops and answers HTTP 500. The local curl
 commands above run these same functions. Other sources come in later slices.

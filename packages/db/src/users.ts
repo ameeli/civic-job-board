@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { users, type User } from "./schema";
-import type { Db } from "./source-runs";
+import type { Db } from "./client";
 
 export async function findUserById(
   db: Db,

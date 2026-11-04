@@ -1,6 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { jobs } from "./schema";
-import type { Db } from "./source-runs";
+import type { Db } from "./client";
 
 /** Untagged jobs, oldest posted first, so a backlog clears in order over several runs. */
 export function readJobsToTag(db: Db, limit: number) {

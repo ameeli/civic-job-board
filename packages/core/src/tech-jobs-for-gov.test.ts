@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import record from "./fixtures/gov-listing.json";
-import { fetchGovRecords, mapGovJob } from "./tech-jobs-for-gov";
+import { fetchGovRecords, mapGovListing } from "./tech-jobs-for-gov";
 
 // Live API capture, 2026-10-28: unrelated fields removed, description kept to its first paragraph.
 describe("Tech Jobs for Gov", () => {
   it("maps board text without salary or location normalization", () => {
-    const job = mapGovJob(record);
+    const job = mapGovListing(record);
     expect(job).toMatchObject({
       source: "tech-jobs-for-gov", sourceJobId: "4296",
       title: "Senior DevOps Engineer",
@@ -20,7 +20,7 @@ describe("Tech Jobs for Gov", () => {
   });
 
   it("decodes HTML entities in API application links", () => {
-    const job = mapGovJob({ ...record, meta: {
+    const job = mapGovListing({ ...record, meta: {
       _application: "https://example.org/?UniqueId=101&amp;CommunityJobs=False&amp;JobID=Data-Analyst-8",
     } });
     expect(job.applyUrl).toBe("https://example.org/?UniqueId=101&CommunityJobs=False&JobID=Data-Analyst-8");
@@ -28,17 +28,17 @@ describe("Tech Jobs for Gov", () => {
   });
 
   it("maps absent or empty API application links to null", () => {
-    expect(mapGovJob({ ...record, meta: {} }).applyUrl).toBeNull();
-    expect(mapGovJob({ ...record, meta: { _application: "" } }).applyUrl).toBeNull();
+    expect(mapGovListing({ ...record, meta: {} }).applyUrl).toBeNull();
+    expect(mapGovListing({ ...record, meta: { _application: "" } }).applyUrl).toBeNull();
   });
 
   it("handles absent optional data and decodes rendered HTML", () => {
-    expect(mapGovJob({ id: 1, link: record.link, title: { rendered: "Data &amp; Design" },
+    expect(mapGovListing({ id: 1, link: record.link, title: { rendered: "Data &amp; Design" },
       content: { rendered: "<p>A</p><p>B &lt; C</p>" } })).toMatchObject({
       title: "Data & Design", description: "A\nB < C", employerName: null,
       salary: null, location: null, deadline: null, postedAt: null,
     });
-    expect(() => mapGovJob({ ...record, id: NaN })).toThrow("Invalid");
+    expect(() => mapGovListing({ ...record, id: NaN })).toThrow("Invalid");
   });
 
   it("fetches every API page", async () => {

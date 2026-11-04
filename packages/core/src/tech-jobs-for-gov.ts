@@ -25,7 +25,7 @@ function descriptionText(html: string): string {
   return $.root().text().replace(/[ \t]+/g, " ").replace(/ *\n\s*/g, "\n").trim();
 }
 
-export function mapGovJob(record: GovRecord) {
+export function mapGovListing(record: GovRecord) {
   if (!Number.isInteger(record.id) || !record.link || !record.title?.rendered ||
       typeof record.content?.rendered !== "string") {
     throw new Error("Invalid Tech Jobs for Gov listing");

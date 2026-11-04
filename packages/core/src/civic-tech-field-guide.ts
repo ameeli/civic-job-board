@@ -34,11 +34,11 @@ function descriptionText(data: NonNullable<CtfgFeedItem["data"]>): string {
   ].filter(Boolean).join("\n");
 }
 
-export function mapCtfgJob(item: CtfgFeedItem) {
+export function mapCtfgListing(item: CtfgFeedItem) {
   const sourceJobId = item.guid?.startsWith(GUID_PREFIX) ? item.guid.slice(GUID_PREFIX.length) : "";
   const { data } = item;
   if (!sourceJobId || !data?.role || !item.permalink) {
-    throw new Error("Invalid Civic Tech Field Guide job");
+    throw new Error("Invalid Civic Tech Field Guide listing");
   }
   return {
     source: CTFG_SOURCE,

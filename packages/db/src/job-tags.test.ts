@@ -1,9 +1,9 @@
 import { beforeEach, expect, it } from "vitest";
 import { readJobsToTag, saveJobTags } from "./job-tags";
-import { saveJob } from "./save-jobs";
+import { saveListing } from "./save-listing";
 import { jobs } from "./schema";
 import { createTestDb } from "./testing";
-import type { Db } from "./source-runs";
+import type { Db } from "./client";
 
 let db: Db;
 
@@ -18,9 +18,9 @@ const job = (sourceJobId: string, postedAt: Date | null) => ({
 });
 
 it("reads untagged jobs oldest first and keeps tags when the listing is saved again", async () => {
-  await saveJob(db, job("new", new Date("2026-10-20T00:00:00Z")));
-  await saveJob(db, job("undated", null));
-  await saveJob(db, job("old", new Date("2026-10-01T00:00:00Z")));
+  await saveListing(db, job("new", new Date("2026-10-20T00:00:00Z")));
+  await saveListing(db, job("undated", null));
+  await saveListing(db, job("old", new Date("2026-10-01T00:00:00Z")));
   expect((await readJobsToTag(db, 10)).map(row => row.title)).toEqual(["Job old", "Job new", "Job undated"]);
 
   const [oldest] = await readJobsToTag(db, 1);
@@ -28,14 +28,14 @@ it("reads untagged jobs oldest first and keeps tags when the listing is saved ag
   await saveJobTags(db, oldest!.id, tags);
   expect((await readJobsToTag(db, 10)).map(row => row.title)).toEqual(["Job new", "Job undated"]);
 
-  await saveJob(db, { ...job("old", new Date("2026-10-01T00:00:00Z")), title: "Edited" });
+  await saveListing(db, { ...job("old", new Date("2026-10-01T00:00:00Z")), title: "Edited" });
   const [saved] = (await db.select().from(jobs)).filter(row => row.id === oldest!.id);
   expect(saved).toMatchObject({ ...tags, title: "Edited" });
   expect(saved!.taggedAt).toBeInstanceOf(Date);
 });
 
 it("does not overwrite tags on a second save", async () => {
-  await saveJob(db, job("one", null));
+  await saveListing(db, job("one", null));
   const [untagged] = await readJobsToTag(db, 1);
   const tags = { roleTags: ["security"], sectorTags: ["education"], seniority: "senior", summary: "Secures schools." };
   expect(await saveJobTags(db, untagged!.id, tags)).toBe(true);

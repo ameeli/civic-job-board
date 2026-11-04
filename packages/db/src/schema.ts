@@ -4,6 +4,7 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -144,18 +145,19 @@ export type User = typeof users.$inferSelect;
 /** The tables Better Auth's Drizzle adapter reads and writes. */
 export const authSchema = { users, sessions, accounts, verifications };
 
-/** Source listings are retained even when they disappear from the board. */
+/**
+ * The jobs the owner sees. Listings with the same apply link and title are one
+ * job; its text is that of the listing saved last. Rows with no apply link
+ * never match (Postgres treats nulls as distinct), so each stays its own job.
+ */
 export const jobs = pgTable("jobs", {
   id: uuid("id").primaryKey().defaultRandom(),
-  source: text("source").notNull(),
-  sourceJobId: text("source_job_id").notNull(),
   title: text("title").notNull(),
   employerName: text("employer_name"),
   location: text("location"),
   salary: text("salary"),
   description: text("description").notNull(),
   applyUrl: text("apply_url"),
-  sourceUrl: text("source_url").notNull(),
   postedAt: timestamp("posted_at", { withTimezone: true }),
   deadline: text("deadline"),
   // Gemini's tags; all null until the job is tagged, which happens once.
@@ -164,6 +166,18 @@ export const jobs = pgTable("jobs", {
   seniority: text("seniority"),
   summary: text("summary"),
   taggedAt: timestamp("tagged_at", { withTimezone: true }),
-}, (table) => [uniqueIndex("jobs_source_id_idx").on(table.source, table.sourceJobId)]);
+}, (table) => [uniqueIndex("jobs_apply_url_title_idx").on(table.applyUrl, table.title)]);
 
-export type NewJob = typeof jobs.$inferInsert;
+/**
+ * Every board listing seen, pointing at the job it is part of. Listings are
+ * retained even when they disappear from the board.
+ */
+export const jobListings = pgTable("job_listings", {
+  source: text("source").notNull(),
+  sourceJobId: text("source_job_id").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  jobId: uuid("job_id").notNull().references(() => jobs.id),
+}, (table) => [
+  primaryKey({ columns: [table.source, table.sourceJobId] }),
+  index("job_listings_job_id_idx").on(table.jobId),
+]);

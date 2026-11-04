@@ -29,6 +29,13 @@
       "when": 1793390976748,
       "tag": "0003_job_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793822644940,
+      "tag": "0004_merge_duplicate_jobs",
+      "breakpoints": true
     }
   ]
 }

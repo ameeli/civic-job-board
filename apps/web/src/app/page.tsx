@@ -38,7 +38,7 @@ export default async function HomePage() {
             {jobs.map((job) => (
               <li key={job.id}>
                 <a href={job.applyUrl || job.sourceUrl}>{job.title}</a>
-                <p>{job.employerName} · {job.source}</p>
+                <p>{job.employerName} · {job.sources.join(", ")}</p>
                 {job.roleTags && job.sectorTags && job.seniority && (
                   <p>{describeJobTags({ roleTags: job.roleTags, sectorTags: job.sectorTags, seniority: job.seniority })}</p>
                 )}
@@ -49,7 +49,7 @@ export default async function HomePage() {
         ) : (
           <p>No jobs saved yet - run the daily check</p>
         )}
-        {jobs.some((job) => job.source === CTFG_SOURCE) && (
+        {jobs.some((job) => job.sources.includes(CTFG_SOURCE)) && (
           <p>
             Jobs from the <a href="https://civictech.guide">Civic Tech Field Guide</a> are shared under{" "}
             <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.

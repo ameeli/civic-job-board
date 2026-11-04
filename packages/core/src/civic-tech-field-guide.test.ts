@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import feed from "./fixtures/civic-tech-field-guide-feed.json";
-import { fetchCtfgFeedItems, mapCtfgJob } from "./civic-tech-field-guide";
+import { fetchCtfgFeedItems, mapCtfgListing } from "./civic-tech-field-guide";
 
 // Live feed.json?kind=jobs capture, 2026-11-03: two items, trimmed to the fields the parser reads.
 const [fullItem, bareItem] = feed.items;
 
 describe("Civic Tech Field Guide", () => {
   it("maps the feed's job fields as the board gives them", () => {
-    expect(mapCtfgJob(fullItem!)).toEqual({
+    expect(mapCtfgListing(fullItem!)).toEqual({
       source: "civic-tech-field-guide",
       sourceJobId: "recoyBXtsX92N1b8k",
       title: "Associate Director, Strategy",
@@ -28,14 +28,14 @@ describe("Civic Tech Field Guide", () => {
   });
 
   it("maps absent optional fields to null", () => {
-    expect(mapCtfgJob(bareItem!)).toMatchObject({
+    expect(mapCtfgListing(bareItem!)).toMatchObject({
       title: "Vice President, Head of Trust & Safety", employerName: "Lego Digital Play",
       salary: null, deadline: null, description: "Categories: Trust & Safety, Child safety",
     });
-    expect(mapCtfgJob({ ...bareItem!, link: null, added: null, data: { role: "Analyst" } })).toMatchObject({
+    expect(mapCtfgListing({ ...bareItem!, link: null, added: null, data: { role: "Analyst" } })).toMatchObject({
       employerName: null, location: null, applyUrl: null, postedAt: null, description: "",
     });
-    expect(mapCtfgJob({ ...bareItem!, added: "Oct 16" }).postedAt).toBeNull();
+    expect(mapCtfgListing({ ...bareItem!, added: "Oct 16" }).postedAt).toBeNull();
   });
 
   it.each([
@@ -44,7 +44,7 @@ describe("Civic Tech Field Guide", () => {
     { ...bareItem!, data: { organization: "No role" } },
     { ...bareItem!, permalink: null },
   ])("rejects an item without a job id, role, or Field Guide page: %j", item => {
-    expect(() => mapCtfgJob(item)).toThrow("Invalid Civic Tech Field Guide job");
+    expect(() => mapCtfgListing(item)).toThrow("Invalid Civic Tech Field Guide listing");
   });
 
   it("fetches the newest 100 jobs from the JSON feed", async () => {

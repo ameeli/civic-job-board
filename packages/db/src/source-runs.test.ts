@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { sourceRuns } from "./schema";
-import { recordSourceRun, type Db } from "./source-runs";
+import type { Db } from "./client";
+import { recordSourceRun } from "./source-runs";
 import { createTestDb } from "./testing";
 
 describe("recordSourceRun", () => {

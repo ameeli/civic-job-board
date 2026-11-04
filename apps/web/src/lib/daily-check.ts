@@ -1,5 +1,5 @@
-import { CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgJob } from "@civic-job-board/core/civic-tech-field-guide";
-import { fetchGovRecords, GOV_SOURCE, mapGovJob } from "@civic-job-board/core/tech-jobs-for-gov";
+import { CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing } from "@civic-job-board/core/civic-tech-field-guide";
+import { fetchGovRecords, GOV_SOURCE, mapGovListing } from "@civic-job-board/core/tech-jobs-for-gov";
 import {
   MAX_JOBS_TAGGED_PER_RUN, PAUSE_BETWEEN_TAGGING_REQUESTS_MS, TAGGING_RETRY_WAITS_S, TAGGING_RUN_SOURCE,
 } from "@civic-job-board/core/job-tags";
@@ -7,7 +7,7 @@ import { readJobsToTag, recordSourceRun, saveJobTags, type Db } from "@civic-job
 import { logDailyCheck as log } from "./daily-check-log";
 import { errorMessage } from "./error-message";
 import { requestGeminiJobTags } from "./gemini-job-tags";
-import { saveSourceJobs } from "./save-source-jobs";
+import { saveSourceListings } from "./save-source-listings";
 
 /** No tagging request starts later than this after tagging began, so it ends inside the 300 s limit. */
 const LAST_TAGGING_REQUEST_AFTER_MS = 260_000;
@@ -18,13 +18,13 @@ const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Checks every job source in turn and returns their source_runs rows. Each
- * source records its own run; fetch, mapping, and job-save failures are isolated
- * by saveSourceJobs. Failure to record a run stops the remaining checks.
+ * source records its own run; fetch, mapping, and listing-save failures are isolated
+ * by saveSourceListings. Failure to record a run stops the remaining checks.
  */
 export async function fetchAndSaveJobs(db: Db) {
   return [
-    await saveSourceJobs(db, GOV_SOURCE, fetchGovRecords, mapGovJob),
-    await saveSourceJobs(db, CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgJob),
+    await saveSourceListings(db, GOV_SOURCE, fetchGovRecords, mapGovListing),
+    await saveSourceListings(db, CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing),
   ];
 }
 

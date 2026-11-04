@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import type { Db } from "./source-runs";
+import type { Db } from "./client";
 
 const migrationsFolder = fileURLToPath(new URL("../migrations", import.meta.url));
 

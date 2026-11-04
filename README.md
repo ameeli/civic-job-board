@@ -198,10 +198,14 @@ commands above run these same functions. Other sources come in later slices.
   (`https://jobs.diversifytech.com/sitemap-jobs.xml`) lists, one request a
   second as its `robots.txt` asks; nothing under the disallowed `/api/` is
   requested. Each job page embeds the board's record of the job as JSON
-  (`var job_json`), which supplies every field. Location and salary are written
+  (`var job_json`), which supplies the job data. Location and salary are written
   as the board shows them, for example `New York, NY, USA (Hybrid)`,
   `United States (Remote only)`, or `$228,800-308,800 (Monthly)`, with the
-  amounts and timeframe as entered and no unit correction. The deadline is the
+  amounts and timeframe as entered and no unit correction. Hybrid locations
+  include the remote requirement after `Hybrid:` when supplied. Salary uses
+  comma-separated amounts without trailing `.00`, `$` for USD or the currency
+  code otherwise; a minimum alone ends in `+`, a maximum alone has no suffix,
+  and neither amount gives null. The deadline is the
   employer's "Application Deadline" text, or null when it is empty; the
   board's own expiry, always 45 days after posting, is not kept. The apply link
   is the record's apply URL and the source link is the job page. Its terms of

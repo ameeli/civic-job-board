@@ -1,3 +1,4 @@
+import { dayDate } from "./day-date";
 import { fetchFromSource } from "./fetch-from-source";
 
 export const CTFG_SOURCE = "civic-tech-field-guide";
@@ -51,7 +52,7 @@ export function mapCtfgListing(item: CtfgFeedItem) {
     applyUrl: item.link || null,
     sourceUrl: item.permalink,
     // The feed dates a job by the day it was added, with no time.
-    postedAt: item.added && /^\d{4}-\d{2}-\d{2}$/.test(item.added) ? new Date(`${item.added}T00:00:00Z`) : null,
+    postedAt: dayDate(item.added),
     deadline: data.deadline || null,
   };
 }

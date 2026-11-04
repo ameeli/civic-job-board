@@ -7,7 +7,7 @@ day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov, Civic Tech Field
-Guide, and Diversify Tech listings on a daily check, tags each new job once with Gemini, and has CI.
+Guide, Diversify Tech, and free Tech Jobs for Good listings on a daily check, tags each new job once with Gemini, and has CI.
 After sign-in, the home page shows a read-only list of saved jobs with their
 title, employer, and sources, ordered by posted date, newest first, with undated jobs last; tagged
 jobs also show their role, sector, and seniority tags and a one-line summary.
@@ -206,6 +206,18 @@ commands above run these same functions. Other sources come in later slices.
   board's own expiry, always 45 days after posting, is not kept. The apply link
   is the record's apply URL and the source link is the job page. Its terms of
   service allow a single copy for personal use.
+- **Tech Jobs for Good** (`tech-jobs-for-good`): free listings only. It reads
+  every page of the free job list (`https://techjobsforgood.com/jobs/`, 30 jobs
+  a page, page count from the first page's page links), then each listed job's
+  page (`/jobs/<id>/`), one request a second (its `robots.txt` sets no delay).
+  The premium jobs, its sitemap, and its RSS feed are never requested. The job
+  page's JobPosting data supplies the title, employer, description, and posted
+  day; location and salary are the page's displayed text, for example
+  `$105,000 - $120,000 Per Year`. The apply link is the employer page or email
+  address the page's Apply button opens, even where the board first asks for a
+  sign-in or email. The deadline is null: the posting's `validThrough` is the
+  board's own expiry, 30 to 61 days after posting. About 90 free jobs take
+  about two minutes of the fetch run.
 
 A completed run answers HTTP 200 with its part's result: `fetch` from the fetch
 route, one entry per source, and `tagging` from the tagging route. Top-level
@@ -214,8 +226,8 @@ route, one entry per source, and `tagging` from the tagging route. Top-level
 the corresponding `source_runs` row. `error` appears only on a failed part:
 
 ```json
-{"ok":false,"fetch":[{"source":"tech-jobs-for-gov","runId":4,"ok":true,"seen":319,"new":0},{"source":"civic-tech-field-guide","runId":5,"ok":false,"seen":0,"new":0,"error":"Civic Tech Field Guide feed: HTTP 429"},{"source":"diversify-tech","runId":6,"ok":true,"seen":16,"new":1}]}
-{"ok":false,"runId":7,"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
+{"ok":false,"fetch":[{"source":"tech-jobs-for-gov","runId":4,"ok":true,"seen":319,"new":0},{"source":"civic-tech-field-guide","runId":5,"ok":false,"seen":0,"new":0,"error":"Civic Tech Field Guide feed: HTTP 429"},{"source":"diversify-tech","runId":6,"ok":true,"seen":16,"new":1},{"source":"tech-jobs-for-good","runId":7,"ok":true,"seen":90,"new":4}]}
+{"ok":false,"runId":8,"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
 ```
 
 `tagging.defaulted` counts tagged jobs whose answer defaulted to unknown, and
@@ -278,6 +290,8 @@ prints the `source-` lines and each tagging run the `tagging-` lines:
 [daily-check] source-done source=civic-tech-field-guide ok=true fetched=100 saved=100 new=3 duration_ms=870
 [daily-check] source-start source=diversify-tech
 [daily-check] source-done source=diversify-tech ok=true fetched=16 saved=16 new=1 duration_ms=20851
+[daily-check] source-start source=tech-jobs-for-good
+[daily-check] source-done source=tech-jobs-for-good ok=true fetched=90 saved=90 new=4 duration_ms=115283
 [daily-check] tagging-start selected=31 cap=35
 [daily-check] tagging-job n=1/31 job_id=<uuid> outcome=tagged attempts=1 duration_ms=1840
 [daily-check] tagging-retry job_id=<uuid> attempt=2 status=503 wait_s=30

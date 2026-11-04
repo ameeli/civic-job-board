@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { fetchFromSource } from "./fetch-from-source";
+import { fetchFromSource, fetchPageTexts } from "./fetch-from-source";
 import { htmlText } from "./html-text";
 import { pause } from "./pause";
 
@@ -104,11 +104,7 @@ export function mapDiversifyListing({ sourceUrl, job }: DiversifyJobPage) {
 /** Every live job page's record, one page request a second after the sitemap. */
 export async function fetchDiversifyJobPages(fetcher = fetch, sleep = pause): Promise<DiversifyJobPage[]> {
   const sitemap = await fetchFromSource("Diversify Tech sitemap", SITEMAP, fetcher);
-  const pages: DiversifyJobPage[] = [];
-  for (const sourceUrl of readJobPageUrls(await sitemap.text())) {
-    await sleep(CRAWL_DELAY_MS);
-    const page = await fetchFromSource("Diversify Tech job page", sourceUrl, fetcher);
-    pages.push({ sourceUrl, job: readJobRecord(await page.text()) });
-  }
-  return pages;
+  const sourceUrls = readJobPageUrls(await sitemap.text());
+  const pages = await fetchPageTexts("Diversify Tech job page", sourceUrls, CRAWL_DELAY_MS, fetcher, sleep);
+  return sourceUrls.map((sourceUrl, index) => ({ sourceUrl, job: readJobRecord(pages[index]!) }));
 }

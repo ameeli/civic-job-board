@@ -6,10 +6,12 @@ import record from "../../../../packages/core/src/fixtures/gov-listing.json";
 import ctfgFeed from "../../../../packages/core/src/fixtures/civic-tech-field-guide-feed.json";
 import { fetchAndSaveJobs, tagUntaggedJobs } from "./daily-check";
 
-// Live Diversify Tech captures, 2026-11-04, the same ones the parser's tests read.
-const diversifyFixture = (name: string) => readFileSync(new URL(`../../../../packages/core/src/fixtures/${name}`, import.meta.url), "utf8");
-const diversifySitemap = diversifyFixture("diversify-tech-sitemap-jobs.xml");
-const diversifyJobPage = diversifyFixture("diversify-tech-job-page.html");
+// Live Diversify Tech and Tech Jobs for Good captures, 2026-11-04, the same ones the parsers' tests read.
+const fixture = (name: string) => readFileSync(new URL(`../../../../packages/core/src/fixtures/${name}`, import.meta.url), "utf8");
+const diversifySitemap = fixture("diversify-tech-sitemap-jobs.xml");
+const diversifyJobPage = fixture("diversify-tech-job-page.html");
+const tjfgJobList = fixture("tech-jobs-for-good-jobs.html");
+const tjfgJobPage = fixture("tech-jobs-for-good-job-page.html");
 
 let db: Db;
 
@@ -41,16 +43,20 @@ const govListing = (id: number, fields: object = {}) => ({
 type FakeRequest = (url: string, init?: RequestInit) => Promise<Response>;
 const emptyCtfgFeed: FakeRequest = async () => Response.json({ items: [] });
 const emptyDiversifySitemap: FakeRequest = async () => new Response("<urlset></urlset>");
+const emptyTjfgJobList: FakeRequest = async () => new Response("<html></html>");
 const noGemini: FakeRequest = async () => { throw new Error("Unexpected Gemini request"); };
 
 /** Fakes every request the daily check makes: each source, then Gemini. */
-function fakeRequests({ gov, ctfg = emptyCtfgFeed, diversify = emptyDiversifySitemap, gemini = noGemini }: {
-  gov: FakeRequest; ctfg?: FakeRequest; diversify?: FakeRequest; gemini?: FakeRequest;
+function fakeRequests({
+  gov, ctfg = emptyCtfgFeed, diversify = emptyDiversifySitemap, tjfg = emptyTjfgJobList, gemini = noGemini,
+}: {
+  gov: FakeRequest; ctfg?: FakeRequest; diversify?: FakeRequest; tjfg?: FakeRequest; gemini?: FakeRequest;
 }) {
   vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => {
     if (url.startsWith("https://civicworkstudio.com/")) return gov(url, init);
     if (url.startsWith("https://civictech.guide/")) return ctfg(url, init);
     if (url.startsWith("https://jobs.diversifytech.com/")) return diversify(url, init);
+    if (url.startsWith("https://techjobsforgood.com/")) return tjfg(url, init);
     return gemini(url, init);
   }));
 }
@@ -70,10 +76,11 @@ it("saves API application links, then updates missing links to null", async () =
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1, error: null },
     { source: "civic-tech-field-guide", ok: true, seen: 0, new: 0, error: null },
     { source: "diversify-tech", ok: true, seen: 0, new: 0, error: null },
+    { source: "tech-jobs-for-good", ok: true, seen: 0, new: 0, error: null },
   ]);
   expect(await db.select().from(jobs)).toMatchObject([{ applyUrl: "https://example.org/?a=1&b=2" }]);
   gov.mockResolvedValueOnce(Response.json([{ ...record, meta: {}, _job_salary: "Competitive" }]));
-  expect(await fetchAndSaveJobs(db)).toMatchObject([{ ok: true, seen: 1, new: 0 }, { ok: true }, { ok: true }]);
+  expect(await fetchAndSaveJobs(db)).toMatchObject([{ ok: true, seen: 1, new: 0 }, { ok: true }, { ok: true }, { ok: true }]);
   expect(gov).toHaveBeenCalledTimes(2);
   expect(await db.select().from(jobs)).toMatchObject([{ salary: "Competitive", applyUrl: null }]);
   expect(await govRuns(db)).toHaveLength(2);
@@ -83,9 +90,11 @@ it("saves API application links, then updates missing links to null", async () =
 it("records empty results and source failures for the banner", async () => {
   fakeRequests({ gov: vi.fn().mockResolvedValueOnce(Response.json([]))
     .mockResolvedValueOnce(new Response("", { status: 503 })) });
-  expect(await fetchAndSaveJobs(db)).toMatchObject([{ ok: true, seen: 0, new: 0 }, { ok: true, seen: 0 }, { ok: true, seen: 0 }]);
   expect(await fetchAndSaveJobs(db)).toMatchObject([
-    { ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" }, { ok: true }, { ok: true },
+    { ok: true, seen: 0, new: 0 }, { ok: true, seen: 0 }, { ok: true, seen: 0 }, { ok: true, seen: 0 },
+  ]);
+  expect(await fetchAndSaveJobs(db)).toMatchObject([
+    { ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" }, { ok: true }, { ok: true }, { ok: true },
   ]);
   expect(await govRuns(db)).toHaveLength(2);
 });
@@ -93,7 +102,7 @@ it("records empty results and source failures for the banner", async () => {
 it("retains successful saves and counts them when a later listing is invalid", async () => {
   fakeRequests({ gov: async () => Response.json([record, { ...record, id: null }]) });
   expect(await fetchAndSaveJobs(db)).toMatchObject([
-    { ok: false, seen: 2, new: 1, error: "Invalid Tech Jobs for Gov listing" }, { ok: true }, { ok: true },
+    { ok: false, seen: 2, new: 1, error: "Invalid Tech Jobs for Gov listing" }, { ok: true }, { ok: true }, { ok: true },
   ]);
   expect(await db.select().from(jobs)).toHaveLength(1);
   expect(await govRuns(db)).toHaveLength(1);
@@ -108,6 +117,7 @@ it("saves Civic Tech Field Guide jobs and tags them with their employer", async 
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2, error: null },
     { source: "diversify-tech", ok: true, seen: 0 },
+    { source: "tech-jobs-for-good", ok: true, seen: 0 },
   ]);
   // Both Field Guide jobs were added the same day, so the list's order between them is arbitrary.
   const listed = await readJobs(db);
@@ -127,7 +137,7 @@ it("saves Civic Tech Field Guide jobs and tags them with their employer", async 
   expect(prompts).toContainEqual(expect.stringContaining("Wellcome Trust"));
   expect(await taggingRuns(db)).toMatchObject([{ ok: true, seen: 3, new: 3 }]);
 
-  expect(await fetchAndSaveJobs(db)).toMatchObject([{ new: 0 }, { ok: true, seen: 2, new: 0 }, { ok: true }]);
+  expect(await fetchAndSaveJobs(db)).toMatchObject([{ new: 0 }, { ok: true, seen: 2, new: 0 }, { ok: true }, { ok: true }]);
   expect(await db.select().from(jobs)).toHaveLength(3);
 });
 
@@ -142,6 +152,7 @@ it("merges a job both sources list with the same apply link and title, and tags 
     { source: "tech-jobs-for-gov", ok: true, seen: 2, new: 2 },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 1 },
     { source: "diversify-tech", ok: true },
+    { source: "tech-jobs-for-good", ok: true },
   ]);
   await tagUntaggedJobs(db, { sleep: async () => {} });
   expect(gemini).toHaveBeenCalledTimes(3);
@@ -172,6 +183,7 @@ it("saves Diversify Tech jobs, merges one Tech Jobs for Gov also lists, and tags
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: true, seen: 0 },
     { source: "diversify-tech", ok: true, seen: 2, new: 1, error: null },
+    { source: "tech-jobs-for-good", ok: true, seen: 0 },
   ]);
   expect(sleep.mock.calls).toEqual([[1_000], [1_000]]);
   await tagUntaggedJobs(db, { sleep: async () => {} });
@@ -194,6 +206,47 @@ it("saves Diversify Tech jobs, merges one Tech Jobs for Gov also lists, and tags
   });
 });
 
+it("saves the free Tech Jobs for Good jobs, merges one Tech Jobs for Gov also lists, and tags each job once", async () => {
+  vi.stubEnv("GEMINI_API_KEY", "test-key");
+  const gemini = vi.fn<FakeRequest>(async () => taggedAnswer());
+  // The list's first page shows two jobs; its later pages are served empty.
+  const secondJobPage = tjfgJobPage.replace('"title": "Senior Full Stack Web Engineer"', '"title": "Data Analyst"')
+    .replace(/window\.open\('[^']*'/, "window.open('https://example.org/apply/data-analyst'");
+  const tjfg: FakeRequest = async url => new Response(
+    url === "https://techjobsforgood.com/jobs/" ? tjfgJobList : url.includes("?page=") ? "<html></html>"
+      : url.endsWith("/37454/") ? secondJobPage : tjfgJobPage,
+  );
+  const govCopy = govListing(4296, {
+    title: { rendered: "Senior Full Stack Web Engineer" },
+    meta: { _application: "https://roisolutions.bamboohr.com/careers/97?source=aWQ9NTU%3D" },
+  });
+  fakeRequests({ gov: async () => Response.json([govCopy]), tjfg, gemini });
+  const sleep = vi.fn(async () => {});
+
+  expect(await fetchAndSaveJobs(db, { sleep })).toMatchObject([
+    { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
+    { source: "civic-tech-field-guide", ok: true, seen: 0 },
+    { source: "diversify-tech", ok: true, seen: 0 },
+    { source: "tech-jobs-for-good", ok: true, seen: 2, new: 1, error: null },
+  ]);
+  expect(sleep).toHaveBeenCalledTimes(4);
+  await tagUntaggedJobs(db, { sleep: async () => {} });
+  expect(gemini).toHaveBeenCalledTimes(2);
+  expect(await readJobs(db)).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      title: "Senior Full Stack Web Engineer", employerName: "ROI Solutions, Inc",
+      sources: ["tech-jobs-for-good", "tech-jobs-for-gov"], roleTags: ["security"],
+    }),
+    expect.objectContaining({
+      title: "Data Analyst", sources: ["tech-jobs-for-good"], sourceUrl: "https://techjobsforgood.com/jobs/37454/",
+    }),
+  ]));
+  // Tech Jobs for Good was saved last, so the merged job shows its text.
+  expect((await db.select().from(jobs)).find(job => job.title === "Senior Full Stack Web Engineer")).toMatchObject({
+    salary: "$105,000 - $120,000 Per Year", location: "Medford, MA / Boston, MA / Remote (Select US States)", deadline: null,
+  });
+});
+
 it("checks the Field Guide even when Tech Jobs for Gov fails, and records each source's run", async () => {
   fakeRequests({
     gov: async () => new Response("", { status: 503 }),
@@ -203,9 +256,10 @@ it("checks the Field Guide even when Tech Jobs for Gov fails, and records each s
     { source: "tech-jobs-for-gov", ok: false, error: "Tech Jobs for Gov API: HTTP 503" },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2 },
     { source: "diversify-tech", ok: true },
+    { source: "tech-jobs-for-good", ok: true },
   ]);
   expect(await fetchAndSaveJobs(db)).toMatchObject([
-    { ok: false }, { source: "civic-tech-field-guide", ok: false, seen: 0, error: "Civic Tech Field Guide feed: HTTP 429" }, { ok: true },
+    { ok: false }, { source: "civic-tech-field-guide", ok: false, seen: 0, error: "Civic Tech Field Guide feed: HTTP 429" }, { ok: true }, { ok: true },
   ]);
   expect(await govRuns(db)).toHaveLength(2);
   expect(await ctfgRuns(db)).toHaveLength(2);
@@ -215,9 +269,11 @@ it("checks the Field Guide even when Tech Jobs for Gov fails, and records each s
 it("records skipped tagging when GEMINI_API_KEY is unset while the source check still saves jobs", async () => {
   const gov = vi.fn().mockResolvedValueOnce(Response.json([record]));
   fakeRequests({ gov });
-  expect(await fetchAndSaveJobs(db)).toMatchObject([{ source: "tech-jobs-for-gov", ok: true, new: 1 }, { ok: true }, { ok: true }]);
+  expect(await fetchAndSaveJobs(db)).toMatchObject([
+    { source: "tech-jobs-for-gov", ok: true, new: 1 }, { ok: true }, { ok: true }, { ok: true },
+  ]);
   await tagUntaggedJobs(db);
-  expect(fetch).toHaveBeenCalledTimes(3);
+  expect(fetch).toHaveBeenCalledTimes(4);
   expect(await taggingRuns(db)).toMatchObject([{ ok: false, seen: 0, new: 0, error: "GEMINI_API_KEY is not set; tagging skipped" }]);
   expect(logLines()).toContainEqual("[daily-check] tagging-skipped reason=missing-api-key");
   expect(await db.select().from(jobs)).toMatchObject([{ roleTags: null, taggedAt: null }]);
@@ -249,6 +305,8 @@ it("tags each new job once with a fake Gemini and leaves failed requests for the
     expect.stringMatching(/^\[daily-check\] source-done source=civic-tech-field-guide ok=true fetched=0 saved=0 new=0 duration_ms=\d+$/),
     "[daily-check] source-start source=diversify-tech",
     expect.stringMatching(/^\[daily-check\] source-done source=diversify-tech ok=true fetched=0 saved=0 new=0 duration_ms=\d+$/),
+    "[daily-check] source-start source=tech-jobs-for-good",
+    expect.stringMatching(/^\[daily-check\] source-done source=tech-jobs-for-good ok=true fetched=0 saved=0 new=0 duration_ms=\d+$/),
     "[daily-check] tagging-start selected=3 cap=35",
     expect.stringMatching(new RegExp(`^\\[daily-check\\] tagging-job n=1/3 job_id=${jobA} outcome=tagged attempts=1 duration_ms=\\d+$`)),
     expect.stringMatching(new RegExp(`^\\[daily-check\\] tagging-job n=2/3 job_id=${jobB} outcome=transient-error status=500 error="Gemini: HTTP 500" attempts=1 duration_ms=\\d+$`)),

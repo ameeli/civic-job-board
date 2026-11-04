@@ -1,3 +1,5 @@
+import { pause } from "./pause";
+
 /** A job board that does not answer within this long fails that source's check. */
 const SOURCE_TIMEOUT_MS = 20_000;
 
@@ -9,4 +11,19 @@ export async function fetchFromSource(boardName: string, url: string, fetcher = 
   const response = await fetcher(url, { signal: AbortSignal.timeout(SOURCE_TIMEOUT_MS), cache: "no-store" });
   if (!response.ok) throw new Error(`${boardName}: HTTP ${response.status}`);
   return response;
+}
+
+/**
+ * The text of each page, fetched one at a time with fetchFromSource, each
+ * `delayMs` after the board's previous request.
+ */
+export async function fetchPageTexts(
+  boardName: string, urls: string[], delayMs: number, fetcher = fetch, sleep = pause,
+): Promise<string[]> {
+  const texts: string[] = [];
+  for (const url of urls) {
+    await sleep(delayMs);
+    texts.push(await (await fetchFromSource(boardName, url, fetcher)).text());
+  }
+  return texts;
 }

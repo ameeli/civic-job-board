@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { allowedSession, getAuth } from "@/lib/auth";
 
 // Everything else requires a signed-in, allowed session.
-const PUBLIC_PATHS = new Set(["/sign-in", "/api/cron/daily"]);
+const PUBLIC_PATHS = new Set(["/sign-in", "/api/cron/fetch-jobs", "/api/cron/tag-jobs"]);
 const PUBLIC_PREFIXES = ["/api/auth/"];
 
 export function isPublicPath(pathname: string): boolean {
@@ -14,8 +14,8 @@ export function isPublicPath(pathname: string): boolean {
 
 /**
  * Protects every page and API route by default. Pages redirect to the sign-in
- * page; API routes answer 401. The daily cron route stays reachable and keeps
- * its own CRON_SECRET check.
+ * page; API routes answer 401. The daily cron routes stay reachable and keep
+ * their own CRON_SECRET check.
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;

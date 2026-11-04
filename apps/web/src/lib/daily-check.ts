@@ -7,7 +7,7 @@ import { logDailyCheck as log } from "./daily-check-log";
 import { errorMessage } from "./error-message";
 import { requestGeminiJobTags } from "./gemini-job-tags";
 
-/** No tagging request starts later than this after the run began, so it ends inside the 300 s limit. */
+/** No tagging request starts later than this after tagging began, so it ends inside the 300 s limit. */
 const LAST_TAGGING_REQUEST_AFTER_MS = 260_000;
 /** Rate limited (429) or overloaded (503): failed recovery stops tagging for the run. */
 const RETRY_THEN_STOP_STATUSES = new Set([429, 503]);
@@ -15,24 +15,10 @@ const RETRY_THEN_STOP_STATUSES = new Set([429, 503]);
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * The source check, then Gemini tagging of untagged jobs. Each records its own
- * source_runs row; both rows are returned with the run's transient tagging failures.
+ * Fetches Tech Jobs for Gov and saves its listings, then records the check's
+ * source_runs row and returns it. Successful saves remain if a later listing fails.
  */
-export async function dailyCheck(db: Db, { sleep = pause } = {}) {
-  const startedAt = new Date();
-  log("run-start");
-  const sourceRun = await checkTechJobsForGov(db);
-  const { taggingRun, transientFailures } = await tagUntaggedJobs(db, startedAt, sleep);
-  log("run-done", {
-    fetched: sourceRun.seen, new: sourceRun.new, tagged: taggingRun.new,
-    defaulted_to_unknown: taggingRun.defaultedToUnknown, transient_failures: transientFailures,
-    duration_ms: Date.now() - startedAt.getTime(),
-  });
-  return { sourceRun, taggingRun, transientFailures };
-}
-
-/** One source check; successful saves remain available if a later listing fails. */
-async function checkTechJobsForGov(db: Db) {
+export async function fetchAndSaveJobs(db: Db) {
   const startedAt = new Date();
   log("source-start", { source: GOV_SOURCE });
   let seen = 0;
@@ -78,8 +64,11 @@ async function tagJob(db: Db, apiKey: string, job: JobToTag): Promise<TaggingRes
   }
 }
 
-/** Tags the backlog; run counts and retry behavior are documented in README.md#job-tags. */
-async function tagUntaggedJobs(db: Db, checkStartedAt: Date, sleep: (ms: number) => Promise<unknown>) {
+/**
+ * Sends untagged jobs to Gemini, then records the run's source_runs row and returns
+ * it with the transient failures; counts and retries are in README.md#job-tags.
+ */
+export async function tagUntaggedJobs(db: Db, { sleep = pause } = {}) {
   const startedAt = new Date();
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -90,7 +79,7 @@ async function tagUntaggedJobs(db: Db, checkStartedAt: Date, sleep: (ms: number)
     });
     return { taggingRun, transientFailures: 0 };
   }
-  const elapsedMs = () => Date.now() - checkStartedAt.getTime();
+  const elapsedMs = () => Date.now() - startedAt.getTime();
   const selected = await readJobsToTag(db, MAX_JOBS_TAGGED_PER_RUN);
   log("tagging-start", { selected: selected.length, cap: MAX_JOBS_TAGGED_PER_RUN });
   let attempted = 0;
@@ -146,6 +135,10 @@ async function tagUntaggedJobs(db: Db, checkStartedAt: Date, sleep: (ms: number)
       break;
     }
   }
+  log("tagging-done", {
+    tagged, defaulted_to_unknown: defaultedToUnknown, transient_failures: transientFailures,
+    duration_ms: Date.now() - startedAt.getTime(),
+  });
   const taggingRun = await recordSourceRun(db, {
     source: TAGGING_RUN_SOURCE, startedAt, finishedAt: new Date(),
     ok: error === null, seen: attempted, new: tagged, defaultedToUnknown, error,

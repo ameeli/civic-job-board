@@ -269,29 +269,31 @@ If something goes wrong:
 
 ### The daily check
 
-[`apps/web/vercel.json`](../apps/web/vercel.json) schedules `GET /api/cron/daily`
-once a day at `0 12 * * *`, which Vercel runs some time between 12:00 and 12:59
-UTC (on Hobby, timing is only accurate to the hour).
+See [the README's daily check section](../README.md#the-daily-check) for the
+fetch and tagging schedule, Pacific time offsets, and retry behavior. The exact
+UTC schedules live in [`apps/web/vercel.json`](../apps/web/vercel.json).
 
-1. In Vercel, open **Settings**, then **Cron Jobs**. The `/api/cron/daily` job
-   should be listed with that schedule
+1. In Vercel, open **Settings**, then **Cron Jobs**. The jobs should match
+   `apps/web/vercel.json`
    ([Vercel: Managing cron jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs)).
-2. Run it once yourself from a terminal. `read -rs` keeps the secret out of
-   your shell history; paste `CRON_SECRET` when it waits, then press Enter:
+2. Run each route once yourself from a terminal, fetch first. `read -rs` keeps
+   the secret out of your shell history; paste `CRON_SECRET` when it waits,
+   then press Enter:
 
    ```sh
    read -rs CRON_SECRET
-   curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/daily
+   curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/fetch-jobs
+   curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/tag-jobs
    ```
 
-   It takes up to about 5 minutes while it tags jobs. Inspect the response
+   The tagging request takes up to about 5 minutes. Inspect each response
    using [the README's daily check response contract](../README.md#the-daily-check);
-   HTTP 200 alone does not mean every part succeeded.
-   The same request without the authorization header returns `401`.
+   HTTP 200 alone does not mean the run succeeded.
+   The same requests without the authorization header return `401`.
 3. In the Neon Console, check the latest `source_runs` rows and the saved jobs
    against the behavior described in [the README's daily check section](../README.md#the-daily-check).
-4. The next day, check `source_runs` again for rows Vercel added between 12:00
-   and 12:59 UTC, or use **View Logs** next to the job in **Cron Jobs**.
+4. The next day, check `source_runs` again for the rows the three jobs added,
+   or use **View Logs** next to each job in **Cron Jobs**.
 
 ## Running the app on your computer
 

@@ -214,8 +214,8 @@ route, one entry per source, and `tagging` from the tagging route. Top-level
 the corresponding `source_runs` row. `error` appears only on a failed part:
 
 ```json
-{"ok":false,"fetch":[{"source":"tech-jobs-for-gov","runId":4,"ok":true,"seen":319,"new":0},{"source":"civic-tech-field-guide","runId":5,"ok":false,"seen":0,"new":0,"error":"Civic Tech Field Guide feed: HTTP 429"}]}
-{"ok":false,"runId":6,"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
+{"ok":false,"fetch":[{"source":"tech-jobs-for-gov","runId":4,"ok":true,"seen":319,"new":0},{"source":"civic-tech-field-guide","runId":5,"ok":false,"seen":0,"new":0,"error":"Civic Tech Field Guide feed: HTTP 429"},{"source":"diversify-tech","runId":6,"ok":true,"seen":16,"new":1}]}
+{"ok":false,"runId":7,"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
 ```
 
 `tagging.defaulted` counts tagged jobs whose answer defaulted to unknown, and

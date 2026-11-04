@@ -18,7 +18,8 @@ const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Checks every job source in turn and returns their source_runs rows. Each
- * source records its own run, so one failing source does not stop the others.
+ * source records its own run; fetch, mapping, and job-save failures are isolated
+ * by saveSourceJobs. Failure to record a run stops the remaining checks.
  */
 export async function fetchAndSaveJobs(db: Db) {
   return [

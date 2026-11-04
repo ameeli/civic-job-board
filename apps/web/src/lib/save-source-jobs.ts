@@ -6,7 +6,7 @@ import { errorMessage } from "./error-message";
  * Checks one source: fetches its listings, maps and saves each in turn, then
  * records the check's source_runs row and returns it. A fetch, mapping, or save
  * failure ends this source's check and is recorded as its error, while earlier
- * saves remain; it never throws for the source's own failures.
+ * saves remain. Failure to record the run still throws.
  */
 export async function saveSourceJobs<Listing>(
   db: Db, source: string, fetchListings: () => Promise<Listing[]>, mapJob: (listing: Listing) => NewJob,

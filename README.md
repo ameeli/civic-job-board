@@ -7,15 +7,15 @@ day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov and Civic Tech Field
-Guide listings on a daily check, tags each new job once with Gemini, and has CI. After sign-in, the home
-page shows a read-only list of saved jobs with their title, employer, and
-source, ordered by posted date, newest first, with undated jobs last; tagged
+Guide listings on a daily check, tags each new job once with Gemini, and has CI.
+After sign-in, the home page shows a read-only list of saved jobs with their
+title, employer, and source, ordered by posted date, newest first, with undated jobs last; tagged
 jobs also show their role, sector, and seniority tags and a one-line summary.
 Titles link to the application link when present, otherwise to the source
 listing. With no saved jobs, it prompts you to run the daily check. When Civic
 Tech Field Guide jobs are listed, a line credits the Field Guide under its CC BY
-4.0 license. Other sources and the full inbox UI are not built yet; screens and visual design are
-being prototyped separately.
+4.0 license. Other sources and the full inbox UI are not built yet; screens and
+visual design are being prototyped separately.
 
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).
 
@@ -168,7 +168,8 @@ deleting older jobs. A fetch, mapping, or save failure ends that source's check
 and records the error, while earlier saves remain and the next source is still
 checked. Each source's check then writes one `source_runs` row with
 success/failure, jobs seen, new jobs, and any error. Empty results record
-success with zero seen, so the inbox banner can flag them later. The local curl
+success with zero seen, so the inbox banner can flag them later. If writing a
+source's run row fails, the fetch stops and answers HTTP 500. The local curl
 commands above run these same functions. Other sources come in later slices.
 
 - **Tech Jobs for Gov** (`tech-jobs-for-gov`): its WordPress API, all pages.
@@ -189,8 +190,9 @@ commands above run these same functions. Other sources come in later slices.
 
 A completed run answers HTTP 200 with its part's result: `fetch` from the fetch
 route, one entry per source, and `tagging` from the tagging route. Top-level
-`ok` is true only when every part succeeded, `runId` is the `source_runs` row,
-and `error` appears only on a failed part:
+`ok` is true only when every part succeeded. Each fetch entry has its own
+`runId`; the tagging route returns `runId` at the top level. Each identifies
+the corresponding `source_runs` row. `error` appears only on a failed part:
 
 ```json
 {"ok":false,"fetch":[{"source":"tech-jobs-for-gov","runId":4,"ok":true,"seen":319,"new":0},{"source":"civic-tech-field-guide","runId":5,"ok":false,"seen":0,"new":0,"error":"Civic Tech Field Guide feed: HTTP 429"}]}

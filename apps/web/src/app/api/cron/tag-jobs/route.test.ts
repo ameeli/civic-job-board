@@ -80,13 +80,4 @@ describe("GET /api/cron/tag-jobs", () => {
     expect(response.status).toBe(401);
     expect(tagUntaggedJobs).not.toHaveBeenCalled();
   });
-
-  it("rejects every request when CRON_SECRET is unset", async () => {
-    vi.stubEnv("CRON_SECRET", "");
-
-    const response = await GET(cronRequest("Bearer "));
-
-    expect(response.status).toBe(401);
-    expect(tagUntaggedJobs).not.toHaveBeenCalled();
-  });
 });

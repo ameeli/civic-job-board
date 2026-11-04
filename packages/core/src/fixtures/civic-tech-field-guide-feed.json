@@ -1,0 +1,42 @@
+{
+  "items": [
+    {
+      "guid": "civictech.guide:jobs:recoyBXtsX92N1b8k",
+      "title": "Associate Director, Strategy at Wellcome Trust",
+      "link": "https://wellcome.wd3.myworkdayjobs.com/en-US/Wellcome/job/Associate-Director--Strategy_R-003525",
+      "added": "2026-10-16",
+      "permalink": "https://app.civictech.guide/job?recordId=recbyxPQel9RAHEV3",
+      "data": {
+        "role": "Associate Director, Strategy",
+        "organization": "Wellcome Trust",
+        "organizationSummary": "We exist to improve health for everyone by helping great ideas to thrive. Wellcome is an independent global charitable foundation.",
+        "organizationType": "Non-profit / charity / foundation",
+        "location": "Hybrid (London, UK)",
+        "salary": "£116,320 - £145,400",
+        "deadline": "2026-10-27",
+        "categories": [
+          "Foundation initiatives"
+        ],
+        "issues": [
+          "health"
+        ]
+      }
+    },
+    {
+      "guid": "civictech.guide:jobs:rec9GX1pqXXghPIJq",
+      "title": "Vice President, Head of Trust & Safety at Lego Digital Play",
+      "link": "https://careers.legodigitalplay.com/jobs/8357555-vice-president-head-of-trust-safety",
+      "added": "2026-10-16",
+      "permalink": "https://app.civictech.guide/job?recordId=recTt9lxV8MjuJNSA",
+      "data": {
+        "role": "Vice President, Head of Trust & Safety",
+        "organization": "Lego Digital Play",
+        "location": "Hybrid (London, UK)",
+        "categories": [
+          "Trust & Safety",
+          "Child safety"
+        ]
+      }
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { CTFG_SOURCE } from "@civic-job-board/core/civic-tech-field-guide";
 import { describeJobTags } from "@civic-job-board/core/job-tags";
 import { readJobs } from "@civic-job-board/db";
 import { getDb } from "@/lib/db";
@@ -47,6 +48,12 @@ export default async function HomePage() {
           </ul>
         ) : (
           <p>No jobs saved yet - run the daily check</p>
+        )}
+        {jobs.some((job) => job.source === CTFG_SOURCE) && (
+          <p>
+            Jobs from the <a href="https://civictech.guide">Civic Tech Field Guide</a> are shared under{" "}
+            <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+          </p>
         )}
       </main>
     </>

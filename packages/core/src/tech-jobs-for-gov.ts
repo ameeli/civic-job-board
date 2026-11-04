@@ -1,5 +1,6 @@
 import { load } from "cheerio";
 import { decodeHTML } from "entities";
+import { fetchFromSource } from "./fetch-from-source";
 
 export const GOV_SOURCE = "tech-jobs-for-gov";
 const API = "https://civicworkstudio.com/wp-json/wp/v2/job-listings";
@@ -49,10 +50,11 @@ export async function fetchGovRecords(fetcher = fetch): Promise<GovRecord[]> {
   const records: GovRecord[] = [];
   let pages = 1;
   for (let page = 1; page <= pages; page++) {
-    const response = await fetcher(`${API}?per_page=100&page=${page}&orderby=id&order=asc&_fields=id,link,title,content,date_gmt,_company_name,_job_location,_job_salary,_job_expires,meta`, {
-      signal: AbortSignal.timeout(20_000), cache: "no-store",
-    });
-    if (!response.ok) throw new Error(`Tech Jobs for Gov API: HTTP ${response.status}`);
+    const response = await fetchFromSource(
+      "Tech Jobs for Gov API",
+      `${API}?per_page=100&page=${page}&orderby=id&order=asc&_fields=id,link,title,content,date_gmt,_company_name,_job_location,_job_salary,_job_expires,meta`,
+      fetcher,
+    );
     pages = Number(response.headers.get("x-wp-totalpages") ?? 1);
     if (!Number.isInteger(pages) || pages < 0) throw new Error("Invalid API page count");
     const batch: unknown = await response.json();

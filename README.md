@@ -168,7 +168,8 @@ its job in `jobs`, without deleting older listings or jobs. Listings with
 exactly the same apply link and title, from any source or reposted on one
 board, are one job, which shows the text of the listing saved last; a listing
 with no apply link is always a job of its own. A board's edit to a listing
-updates its job in place, or moves the listing to the job it now matches. A
+updates its job in place, or moves the listing to the job it now matches.
+When a listing leaves a shared job (for example after its title changes), the job left behind keeps showing the moved listing's text until a remaining listing is saved again, normally on that source's next successful daily fetch. A
 fetch, mapping, or save failure ends that source's check
 and records the error, while earlier saves remain and the next source is still
 checked. Each source's check then writes one `source_runs` row with

@@ -215,8 +215,9 @@ commands above run these same functions. Other sources come in later slices.
   day; location and salary are the page's displayed text, for example
   `$105,000 - $120,000 Per Year`. The apply link is the employer page or email
   address the page's Apply button opens, even where the board first asks for a
-  sign-in or email. The deadline is null: the posting's `validThrough` is the
-  board's own expiry, 30 to 61 days after posting. About 90 free jobs take
+  sign-in or email. The deadline is the page's displayed employer
+  "Application deadline:" text, or null when absent or empty; the posting's
+  `validThrough`, the board's own expiry, is ignored. About 90 free jobs take
   about two minutes of the fetch run.
 
 A completed run answers HTTP 200 with its part's result: `fetch` from the fetch

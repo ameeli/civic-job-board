@@ -24,6 +24,7 @@ export interface TjfgJob {
   };
   location: string | null;
   salary: string | null;
+  deadline: string | null;
   applyUrl: string | null;
 }
 
@@ -58,10 +59,14 @@ export function readJobPage(pageHtml: string): TjfgJob {
   const $ = load(pageHtml);
   const postingJson = $('script[type="application/ld+json"]').first().text();
   if (!postingJson) throw new Error("Tech Jobs for Good job page has no JobPosting data");
+  const deadlineText = $("span").not('[itemprop="description"], [itemprop="description"] span').toArray()
+    .map(span => $(span).text().trim())
+    .find(text => text.startsWith("Application deadline:"));
   return {
     posting: JSON.parse(postingJson) as TjfgJob["posting"],
     location: shownText($('[itemprop="jobLocation"]').first().text()),
     salary: shownText($(".ui.green.basic.label").first().text()),
+    deadline: shownText(deadlineText?.slice("Application deadline:".length) ?? ""),
     applyUrl: APPLY_SCRIPT.exec(pageHtml)?.[1] ?? null,
   };
 }
@@ -80,8 +85,7 @@ export function mapTjfgListing({ id, job }: TjfgJobPage) {
     applyUrl: job.applyUrl,
     sourceUrl: jobPageUrl(id),
     postedAt: dayDate(posting.datePosted),
-    // The posting's validThrough is the board's own expiry, not the employer's deadline.
-    deadline: null,
+    deadline: job.deadline,
   };
 }
 

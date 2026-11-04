@@ -1,5 +1,7 @@
 import { CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing } from "@civic-job-board/core/civic-tech-field-guide";
+import { DIVERSIFY_SOURCE, fetchDiversifyJobPages, mapDiversifyListing } from "@civic-job-board/core/diversify-tech";
 import { fetchGovRecords, GOV_SOURCE, mapGovListing } from "@civic-job-board/core/tech-jobs-for-gov";
+import { pause } from "@civic-job-board/core";
 import {
   MAX_JOBS_TAGGED_PER_RUN, PAUSE_BETWEEN_TAGGING_REQUESTS_MS, TAGGING_RETRY_WAITS_S, TAGGING_RUN_SOURCE,
 } from "@civic-job-board/core/job-tags";
@@ -14,17 +16,16 @@ const LAST_TAGGING_REQUEST_AFTER_MS = 260_000;
 /** Rate limited (429) or overloaded (503): failed recovery stops tagging for the run. */
 const RETRY_THEN_STOP_STATUSES = new Set([429, 503]);
 
-const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 /**
  * Checks every job source in turn and returns their source_runs rows. Each
  * source records its own run; fetch, mapping, and listing-save failures are isolated
  * by saveSourceListings. Failure to record a run stops the remaining checks.
  */
-export async function fetchAndSaveJobs(db: Db) {
+export async function fetchAndSaveJobs(db: Db, { sleep = pause } = {}) {
   return [
     await saveSourceListings(db, GOV_SOURCE, fetchGovRecords, mapGovListing),
     await saveSourceListings(db, CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing),
+    await saveSourceListings(db, DIVERSIFY_SOURCE, () => fetchDiversifyJobPages(fetch, sleep), mapDiversifyListing),
   ];
 }
 

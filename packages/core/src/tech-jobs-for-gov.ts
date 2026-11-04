@@ -1,6 +1,6 @@
-import { load } from "cheerio";
 import { decodeHTML } from "entities";
 import { fetchFromSource } from "./fetch-from-source";
+import { htmlText } from "./html-text";
 
 export const GOV_SOURCE = "tech-jobs-for-gov";
 const API = "https://civicworkstudio.com/wp-json/wp/v2/job-listings";
@@ -18,13 +18,6 @@ export interface GovRecord {
   meta?: { _application?: string };
 }
 
-function descriptionText(html: string): string {
-  const $ = load(html);
-  $("script, style").remove();
-  $("p, br, li, h1, h2, h3, h4, div").append("\n");
-  return $.root().text().replace(/[ \t]+/g, " ").replace(/ *\n\s*/g, "\n").trim();
-}
-
 export function mapGovListing(record: GovRecord) {
   if (!Number.isInteger(record.id) || !record.link || !record.title?.rendered ||
       typeof record.content?.rendered !== "string") {
@@ -34,11 +27,11 @@ export function mapGovListing(record: GovRecord) {
   return {
     source: GOV_SOURCE,
     sourceJobId: String(record.id),
-    title: descriptionText(record.title.rendered),
+    title: htmlText(record.title.rendered),
     employerName: record._company_name ?? null,
     location: record._job_location ?? null,
     salary: record._job_salary ?? null,
-    description: descriptionText(record.content.rendered),
+    description: htmlText(record.content.rendered),
     applyUrl,
     sourceUrl: record.link,
     postedAt: record.date_gmt ? new Date(`${record.date_gmt}Z`) : null,

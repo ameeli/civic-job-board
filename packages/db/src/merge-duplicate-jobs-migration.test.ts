@@ -1,14 +1,19 @@
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
-import { expect, it } from "vitest";
+import { beforeEach, expect, it } from "vitest";
 import journal from "../migrations/meta/_journal.json";
 
 const migrationSql = (tag: string) => readFileSync(new URL(`../migrations/${tag}.sql`, import.meta.url), "utf8");
+const [mergeMigration, ...earlier] = journal.entries.map(entry => entry.tag).reverse();
+let pg: PGlite;
+
+// Keep cold Postgres startup and prerequisite migrations outside the behavior test timeout.
+beforeEach(async () => {
+  pg = new PGlite();
+  for (const tag of earlier.toReversed()) await pg.exec(migrationSql(tag));
+});
 
 it("merges existing jobs with the same apply link and title, keeping the tagged one", async () => {
-  const pg = new PGlite();
-  const [mergeMigration, ...earlier] = journal.entries.map(entry => entry.tag).reverse();
-  for (const tag of earlier.reverse()) await pg.exec(migrationSql(tag));
   await pg.exec(`
     INSERT INTO jobs (id, source, source_job_id, source_url, title, description, apply_url, posted_at, tagged_at) VALUES
       ('00000000-0000-0000-0000-000000000001', 'gov', '1', 'https://gov/1', 'Engineer', '', 'https://apply/1', '2026-10-01', NULL),

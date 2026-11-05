@@ -1,5 +1,6 @@
 import { CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing } from "@civic-job-board/core/civic-tech-field-guide";
 import { DIVERSIFY_SOURCE, fetchDiversifyJobPages, mapDiversifyListing } from "@civic-job-board/core/diversify-tech";
+import { fetchTjfgJobPages, mapTjfgListing, TJFG_SOURCE } from "@civic-job-board/core/tech-jobs-for-good";
 import { fetchGovRecords, GOV_SOURCE, mapGovListing } from "@civic-job-board/core/tech-jobs-for-gov";
 import { pause } from "@civic-job-board/core";
 import {
@@ -26,6 +27,7 @@ export async function fetchAndSaveJobs(db: Db, { sleep = pause } = {}) {
     await saveSourceListings(db, GOV_SOURCE, fetchGovRecords, mapGovListing),
     await saveSourceListings(db, CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing),
     await saveSourceListings(db, DIVERSIFY_SOURCE, () => fetchDiversifyJobPages(fetch, sleep), mapDiversifyListing),
+    await saveSourceListings(db, TJFG_SOURCE, () => fetchTjfgJobPages(fetch, sleep), mapTjfgListing),
   ];
 }
 

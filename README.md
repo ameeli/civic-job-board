@@ -351,14 +351,13 @@ Vercel Hobby plan limits that each daily run must fit in, as documented on
   time spent waiting on I/O (for example, AI calls) does not count as active
   CPU. ([Vercel Hobby Plan](https://vercel.com/docs/plans/hobby))
 
-**If the work outgrows one 300-second run:** Vercel's documented approach is to
-split it into separate units or to combine the cron job with regular HTTP
+**If one source or tagging outgrows its 300-second run:** Vercel's documented
+approach is to split it into separate units or to combine the cron job with regular HTTP
 requests to the app's own API
 ([Managing Cron Jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-job-duration)).
 So a run can chain to itself: before its time runs out, it makes an
 authenticated HTTP request to its own route to continue where it stopped, and
-each request gets a fresh 300-second limit. Alternatively, sources can be spread
-over several staggered daily cron jobs (up to 100 per project).
+each request gets a fresh 300-second limit.
 
 ## Login
 

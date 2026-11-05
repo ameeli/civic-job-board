@@ -174,8 +174,9 @@ fetch, mapping, or save failure ends that source's check
 and records the error, while earlier saves remain and the next source is still
 checked. Each source's check then writes one `source_runs` row with
 success/failure, listings seen, new jobs (a listing that joins an existing job
-is not new), and any error. Empty results record
-success with zero seen, so the inbox banner can flag them later. If writing a
+is not new), and any error. A source that returns no
+listings records a failure, since an empty result usually means its page
+changed shape. If writing a
 source's run row fails, the fetch stops and answers HTTP 500. The local curl
 commands above run these same functions. Other sources come in later slices.
 

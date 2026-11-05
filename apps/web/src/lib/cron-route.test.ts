@@ -28,6 +28,13 @@ describe("cronRouteHandler", () => {
     expect(runJob).toHaveBeenCalledOnce();
   });
 
+  it("answers with a Response the job returns as is", async () => {
+    const runJob = vi.fn().mockResolvedValue(Response.json({ ok: false, error: "Unknown source" }, { status: 404 }));
+    const response = await cronRouteHandler(failure, runJob)(cronRequest(`Bearer ${secret}`));
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ ok: false, error: "Unknown source" });
+  });
+
   it("answers 500 with the fixed message and logs the error when the job throws", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const thrown = new Error("database unreachable at postgres://secret@host");

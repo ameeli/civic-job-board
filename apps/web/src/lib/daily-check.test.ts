@@ -4,7 +4,7 @@ import { jobListings, jobs, readJobs, readJobsToTag, saveJobTags, sourceRuns, ty
 import { createTestDb } from "@civic-job-board/db/testing";
 import record from "../../../../packages/core/src/fixtures/gov-listing.json";
 import ctfgFeed from "../../../../packages/core/src/fixtures/civic-tech-field-guide-feed.json";
-import { fetchAndSaveJobs, tagUntaggedJobs } from "./daily-check";
+import { fetchAndSaveSource, JOB_SOURCES, tagUntaggedJobs } from "./daily-check";
 import { NO_LISTINGS_ERROR } from "./save-source-listings";
 
 // Live Diversify Tech and Tech Jobs for Good captures, 2026-11-04, the same ones the parsers' tests read.
@@ -62,9 +62,16 @@ function fakeRequests({
   }));
 }
 
-/** The fetch cron, then a tagging cron, as they run each night. */
+/** Each source's fetch cron, one after another in schedule order. */
+async function fetchEverySource(db: Db, options?: Parameters<typeof fetchAndSaveSource>[2]) {
+  const sourceRuns = [];
+  for (const source of JOB_SOURCES) sourceRuns.push(await fetchAndSaveSource(db, source, options));
+  return sourceRuns;
+}
+
+/** The fetch crons, then a tagging cron, as they run each night. */
 async function fetchThenTag(db: Db, options?: Parameters<typeof tagUntaggedJobs>[1]) {
-  await fetchAndSaveJobs(db);
+  await fetchEverySource(db);
   return tagUntaggedJobs(db, options);
 }
 
@@ -73,7 +80,7 @@ it("saves API application links, then updates missing links to null", async () =
     _application: "https://example.org/?a=1&amp;b=2",
   } }]));
   fakeRequests({ gov });
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1, error: null },
     { source: "civic-tech-field-guide", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
     { source: "diversify-tech", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
@@ -81,7 +88,7 @@ it("saves API application links, then updates missing links to null", async () =
   ]);
   expect(await db.select().from(jobs)).toMatchObject([{ applyUrl: "https://example.org/?a=1&b=2" }]);
   gov.mockResolvedValueOnce(Response.json([{ ...record, meta: {}, _job_salary: "Competitive" }]));
-  expect(await fetchAndSaveJobs(db)).toMatchObject([{ ok: true, seen: 1, new: 0 }, { ok: false }, { ok: false }, { ok: false }]);
+  expect(await fetchEverySource(db)).toMatchObject([{ ok: true, seen: 1, new: 0 }, { ok: false }, { ok: false }, { ok: false }]);
   expect(gov).toHaveBeenCalledTimes(2);
   expect(await db.select().from(jobs)).toMatchObject([{ salary: "Competitive", applyUrl: null }]);
   expect(await govRuns(db)).toHaveLength(2);
@@ -93,12 +100,12 @@ it("records a source with no listings as failed without affecting the other sour
     gov: vi.fn().mockResolvedValueOnce(Response.json([])).mockResolvedValueOnce(new Response("", { status: 503 })),
     ctfg: async () => Response.json(ctfgFeed),
   });
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2, error: null },
     { ok: false }, { ok: false },
   ]);
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" }, { ok: true }, { ok: false }, { ok: false },
   ]);
   expect(await govRuns(db)).toHaveLength(2);
@@ -106,7 +113,7 @@ it("records a source with no listings as failed without affecting the other sour
 
 it("retains successful saves and counts them when a later listing is invalid", async () => {
   fakeRequests({ gov: async () => Response.json([record, { ...record, id: null }]) });
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { ok: false, seen: 2, new: 1, error: "Invalid Tech Jobs for Gov listing" }, { ok: false }, { ok: false }, { ok: false },
   ]);
   expect(await db.select().from(jobs)).toHaveLength(1);
@@ -118,7 +125,7 @@ it("saves Civic Tech Field Guide jobs and tags them with their employer", async 
   const gemini = vi.fn<FakeRequest>(async () => taggedAnswer());
   fakeRequests({ gov: async () => Response.json([record]), ctfg: async () => Response.json(ctfgFeed), gemini });
 
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2, error: null },
     { source: "diversify-tech", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
@@ -142,7 +149,7 @@ it("saves Civic Tech Field Guide jobs and tags them with their employer", async 
   expect(prompts).toContainEqual(expect.stringContaining("Wellcome Trust"));
   expect(await taggingRuns(db)).toMatchObject([{ ok: true, seen: 3, new: 3 }]);
 
-  expect(await fetchAndSaveJobs(db)).toMatchObject([{ new: 0 }, { ok: true, seen: 2, new: 0 }, { ok: false }, { ok: false }]);
+  expect(await fetchEverySource(db)).toMatchObject([{ new: 0 }, { ok: true, seen: 2, new: 0 }, { ok: false }, { ok: false }]);
   expect(await db.select().from(jobs)).toHaveLength(3);
 });
 
@@ -153,7 +160,7 @@ it("merges a job both sources list with the same apply link and title, and tags 
   const govCopy = govListing(4296, { title: { rendered: guideItem!.data.role }, meta: { _application: guideItem!.link } });
   fakeRequests({ gov: async () => Response.json([govCopy, govListing(4297)]), ctfg: async () => Response.json(ctfgFeed), gemini });
 
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 2, new: 2 },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 1 },
     { source: "diversify-tech", ok: false },
@@ -184,7 +191,7 @@ it("saves Diversify Tech jobs, merges one Tech Jobs for Gov also lists, and tags
   fakeRequests({ gov: async () => Response.json([govCopy]), diversify, gemini });
   const sleep = vi.fn(async () => {});
 
-  expect(await fetchAndSaveJobs(db, { sleep })).toMatchObject([
+  expect(await fetchEverySource(db, { sleep })).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
     { source: "diversify-tech", ok: true, seen: 2, new: 1, error: null },
@@ -228,7 +235,7 @@ it("saves the free Tech Jobs for Good jobs, merges one Tech Jobs for Gov also li
   fakeRequests({ gov: async () => Response.json([govCopy]), tjfg, gemini });
   const sleep = vi.fn(async () => {});
 
-  expect(await fetchAndSaveJobs(db, { sleep })).toMatchObject([
+  expect(await fetchEverySource(db, { sleep })).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
     { source: "diversify-tech", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
@@ -252,18 +259,58 @@ it("saves the free Tech Jobs for Good jobs, merges one Tech Jobs for Gov also li
   });
 });
 
-it("checks the Field Guide even when Tech Jobs for Gov fails, and records each source's run", async () => {
+it("saves two sources checked at the same time without either overwriting the other", async () => {
+  // Vercel can fire two sources' fetch crons within the same hour. Each feed answers only once
+  // both checks have asked, so their saves overlap. PGlite runs one transaction at a time; on
+  // Postgres, saveListing's advisory lock does the same across connections.
+  let bothAsked!: () => void;
+  const asked = new Promise<void>(resolve => { bothAsked = resolve; });
+  let waiting = 2;
+  const afterBothAsk = (answer: () => Response): FakeRequest => async () => {
+    if (--waiting === 0) bothAsked();
+    await asked;
+    return answer();
+  };
+  const [guideItem] = ctfgFeed.items;
+  const govCopy = govListing(4296, { title: { rendered: guideItem!.data.role }, meta: { _application: guideItem!.link } });
+  fakeRequests({
+    gov: afterBothAsk(() => Response.json([govCopy, govListing(4297)])),
+    ctfg: afterBothAsk(() => Response.json(ctfgFeed)),
+  });
+
+  const [govRun, ctfgRun] = await Promise.all([
+    fetchAndSaveSource(db, "tech-jobs-for-gov"), fetchAndSaveSource(db, "civic-tech-field-guide"),
+  ]);
+  expect([govRun, ctfgRun]).toMatchObject([
+    { source: "tech-jobs-for-gov", ok: true, seen: 2, error: null },
+    { source: "civic-tech-field-guide", ok: true, seen: 2, error: null },
+  ]);
+  // The shared job is new to whichever source saved it first, and counted once.
+  expect(govRun!.new + ctfgRun!.new).toBe(3);
+  expect(await db.select().from(jobListings)).toHaveLength(4);
+  const listed = await readJobs(db);
+  expect(listed).toHaveLength(3);
+  expect(listed).toEqual(expect.arrayContaining([
+    expect.objectContaining({ title: guideItem!.data.role, sources: ["civic-tech-field-guide", "tech-jobs-for-gov"] }),
+    expect.objectContaining({ applyUrl: "https://example.org/apply/4297", sources: ["tech-jobs-for-gov"] }),
+    expect.objectContaining({ title: "Vice President, Head of Trust & Safety", sources: ["civic-tech-field-guide"] }),
+  ]));
+  expect(await govRuns(db)).toMatchObject([{ id: govRun!.id }]);
+  expect(await ctfgRuns(db)).toMatchObject([{ id: ctfgRun!.id }]);
+});
+
+it("records each source's run, failed or not, and keeps the jobs a successful check saved", async () => {
   fakeRequests({
     gov: async () => new Response("", { status: 503 }),
     ctfg: vi.fn().mockResolvedValueOnce(Response.json(ctfgFeed)).mockResolvedValueOnce(new Response("", { status: 429 })),
   });
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: false, error: "Tech Jobs for Gov API: HTTP 503" },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2 },
     { source: "diversify-tech", ok: false },
     { source: "tech-jobs-for-good", ok: false },
   ]);
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { ok: false }, { source: "civic-tech-field-guide", ok: false, seen: 0, error: "Civic Tech Field Guide feed: HTTP 429" }, { ok: false }, { ok: false },
   ]);
   expect(await govRuns(db)).toHaveLength(2);
@@ -274,7 +321,7 @@ it("checks the Field Guide even when Tech Jobs for Gov fails, and records each s
 it("records skipped tagging when GEMINI_API_KEY is unset while the source check still saves jobs", async () => {
   const gov = vi.fn().mockResolvedValueOnce(Response.json([record]));
   fakeRequests({ gov });
-  expect(await fetchAndSaveJobs(db)).toMatchObject([
+  expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, new: 1 }, { ok: false }, { ok: false }, { ok: false },
   ]);
   await tagUntaggedJobs(db);

@@ -17,18 +17,33 @@ const LAST_TAGGING_REQUEST_AFTER_MS = 260_000;
 /** Rate limited (429) or overloaded (503): failed recovery stops tagging for the run. */
 const RETRY_THEN_STOP_STATUSES = new Set([429, 503]);
 
+/** Each source's check; the scraped boards pause with `sleep` between page requests. */
+const SOURCE_CHECKS = {
+  [GOV_SOURCE]: (db: Db) => saveSourceListings(db, GOV_SOURCE, fetchGovRecords, mapGovListing),
+  [CTFG_SOURCE]: (db: Db) => saveSourceListings(db, CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing),
+  [DIVERSIFY_SOURCE]: (db: Db, sleep: typeof pause) =>
+    saveSourceListings(db, DIVERSIFY_SOURCE, () => fetchDiversifyJobPages(fetch, sleep), mapDiversifyListing),
+  [TJFG_SOURCE]: (db: Db, sleep: typeof pause) =>
+    saveSourceListings(db, TJFG_SOURCE, () => fetchTjfgJobPages(fetch, sleep), mapTjfgListing),
+};
+
+/** A job board source the fetch route checks, by its `source_runs` name. */
+export type JobSource = keyof typeof SOURCE_CHECKS;
+
+/** Every job board source, each fetched by its own cron job. */
+export const JOB_SOURCES = Object.keys(SOURCE_CHECKS) as JobSource[];
+
+export function isJobSource(name: string): name is JobSource {
+  return Object.hasOwn(SOURCE_CHECKS, name);
+}
+
 /**
- * Checks every job source in turn and returns their source_runs rows. Each
- * source records its own run; fetch, mapping, and listing-save failures are isolated
- * by saveSourceListings. Failure to record a run stops the remaining checks.
+ * Checks one job source and returns its source_runs row. Fetch, mapping, and
+ * listing-save failures are recorded in that row by saveSourceListings; failure
+ * to record the run throws.
  */
-export async function fetchAndSaveJobs(db: Db, { sleep = pause } = {}) {
-  return [
-    await saveSourceListings(db, GOV_SOURCE, fetchGovRecords, mapGovListing),
-    await saveSourceListings(db, CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing),
-    await saveSourceListings(db, DIVERSIFY_SOURCE, () => fetchDiversifyJobPages(fetch, sleep), mapDiversifyListing),
-    await saveSourceListings(db, TJFG_SOURCE, () => fetchTjfgJobPages(fetch, sleep), mapTjfgListing),
-  ];
+export async function fetchAndSaveSource(db: Db, source: JobSource, { sleep = pause } = {}) {
+  return SOURCE_CHECKS[source](db, sleep);
 }
 
 type JobToTag = Awaited<ReturnType<typeof readJobsToTag>>[number];

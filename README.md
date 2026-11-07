@@ -103,10 +103,13 @@ pnpm db:migrate
 ```
 
 To try the daily check locally (Vercel does not run crons in local dev), set
-`CRON_SECRET`, run the app, and call the routes yourself, fetch first:
+`CRON_SECRET`, run the app, and call the routes yourself, each source's fetch
+first:
 
 ```sh
-curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/fetch-jobs
+for source in tech-jobs-for-gov civic-tech-field-guide diversify-tech tech-jobs-for-good; do
+  curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/fetch-jobs/$source"
+done
 curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/tag-jobs
 ```
 
@@ -147,12 +150,16 @@ lint, typecheck, tests, and a build on every pull request and push to `main`.
 
 ## The daily check
 
-[`apps/web/vercel.json`](apps/web/vercel.json) schedules three daily cron jobs,
-each doing one thing in its own 300-second run (times in UTC):
+[`apps/web/vercel.json`](apps/web/vercel.json) schedules six daily cron jobs,
+each doing one thing in its own 300-second run (times in UTC), so a slow or
+stuck source cannot use up the other sources' time:
 
 | Schedule | Route | Pacific standard time |
 | --- | --- | --- |
-| `0 8 * * *` | `GET /api/cron/fetch-jobs` | around midnight |
+| `0 8 * * *` | `GET /api/cron/fetch-jobs/tech-jobs-for-gov` | midnight to 1am |
+| `0 8 * * *` | `GET /api/cron/fetch-jobs/civic-tech-field-guide` | midnight to 1am |
+| `0 9 * * *` | `GET /api/cron/fetch-jobs/diversify-tech` | 1am to 2am |
+| `0 9 * * *` | `GET /api/cron/fetch-jobs/tech-jobs-for-good` | 1am to 2am |
 | `0 11 * * *` | `GET /api/cron/tag-jobs` | around 3am |
 | `0 14 * * *` | `GET /api/cron/tag-jobs` | around 6am |
 
@@ -161,8 +168,9 @@ runs an hour later in Pacific time. The second tagging run picks up jobs the
 first left untagged, for example after Gemini was overloaded. Untagged jobs
 still show in the list.
 
-Both routes check the `CRON_SECRET` bearer header. The fetch route calls
-`fetchAndSaveJobs`, which checks each source in turn. Every source's check
+Both routes check the `CRON_SECRET` bearer header. The fetch route,
+`/api/cron/fetch-jobs/<source>`, calls `fetchAndSaveSource` for the source it
+names and answers 404 for any other name. Every source's check
 saves each listing in `job_listings`, by source and source job id, pointing at
 its job in `jobs`, retaining listings that disappear from a board. Listings with
 exactly the same apply link and title, from any source or reposted on one
@@ -171,13 +179,15 @@ with no apply link is always a job of its own. A board's edit to a listing
 updates its job in place, or moves the listing to the job it now matches.
 When a listing leaves a shared job (for example after its title changes), the job left behind keeps showing the moved listing's text until a remaining listing is saved again, normally on that source's next successful daily fetch. A
 fetch, mapping, or save failure ends that source's check
-and records the error, while earlier saves remain and the next source is still
-checked. Each source's check then writes one `source_runs` row with
+and records the error, while earlier saves remain; other sources are checked by
+their own runs. Listing saves run one at a time across connections, so two
+sources checked at the same time cannot create the same job twice. Each
+source's check then writes one `source_runs` row with
 success/failure, listings seen, new jobs (a listing that joins an existing job
 is not new), and any error. A source that returns no
 listings records a failure, since an empty result usually means its page
 changed shape. If writing a
-source's run row fails, the fetch stops and answers HTTP 500. The local curl
+source's run row fails, that fetch answers HTTP 500. The local curl
 commands above run these same functions. Other sources come in later slices.
 
 - **Tech Jobs for Gov** (`tech-jobs-for-gov`): its WordPress API, all pages.
@@ -223,16 +233,16 @@ commands above run these same functions. Other sources come in later slices.
   sign-in or email. The deadline is the page's displayed employer
   "Application deadline:" text, or null when absent or empty; the posting's
   `validThrough`, the board's own expiry, is ignored. About 90 free jobs take
-  about two minutes of the fetch run.
+  about two minutes of its fetch run.
 
-A completed run answers HTTP 200 with its part's result: `fetch` from the fetch
-route, one entry per source, and `tagging` from the tagging route. Top-level
-`ok` is true only when every part succeeded. Each fetch entry has its own
-`runId`; the tagging route returns `runId` at the top level. Each identifies
-the corresponding `source_runs` row. `error` appears only on a failed part:
+A completed run answers HTTP 200 with its part's result: `fetch` from a fetch
+route, for its one source, and `tagging` from the tagging route. Top-level
+`ok` is true only when that part succeeded, and `runId` identifies the run's
+`source_runs` row. `error` appears only on a failed part:
 
 ```json
-{"ok":false,"fetch":[{"source":"tech-jobs-for-gov","runId":4,"ok":true,"seen":319,"new":0},{"source":"civic-tech-field-guide","runId":5,"ok":false,"seen":0,"new":0,"error":"Civic Tech Field Guide feed: HTTP 429"},{"source":"diversify-tech","runId":6,"ok":true,"seen":16,"new":1},{"source":"tech-jobs-for-good","runId":7,"ok":true,"seen":90,"new":4}]}
+{"ok":true,"runId":4,"fetch":{"source":"tech-jobs-for-gov","ok":true,"seen":319,"new":0}}
+{"ok":false,"runId":5,"fetch":{"source":"civic-tech-field-guide","ok":false,"seen":0,"new":0,"error":"Civic Tech Field Guide feed: HTTP 429"}}
 {"ok":false,"runId":8,"tagging":{"ok":false,"tagged":0,"defaulted":0,"transient":27,"error":"Gemini: HTTP 503"}}
 ```
 
@@ -286,8 +296,9 @@ skipped because another run already tagged the job counts toward neither
 
 The daily check prints one line per step to the console, which Vercel keeps in
 the project's **Logs** (and `pnpm dev` prints in the terminal). Each line starts
-with `[daily-check]`, then an event name and `key=value` fields. The fetch run
-prints the `source-` lines and each tagging run the `tagging-` lines:
+with `[daily-check]`, then an event name and `key=value` fields. Each fetch run
+prints the `source-` lines for its source, and each tagging run prints the
+`tagging-` lines. Examples from the separate runs:
 
 ```
 [daily-check] source-start source=tech-jobs-for-gov
@@ -341,14 +352,13 @@ Vercel Hobby plan limits that each daily run must fit in, as documented on
   time spent waiting on I/O (for example, AI calls) does not count as active
   CPU. ([Vercel Hobby Plan](https://vercel.com/docs/plans/hobby))
 
-**If the work outgrows one 300-second run:** Vercel's documented approach is to
-split it into separate units or to combine the cron job with regular HTTP
+**If one source or tagging outgrows its 300-second run:** Vercel's documented
+approach is to split it into separate units or to combine the cron job with regular HTTP
 requests to the app's own API
 ([Managing Cron Jobs](https://vercel.com/docs/cron-jobs/manage-cron-jobs#cron-job-duration)).
 So a run can chain to itself: before its time runs out, it makes an
 authenticated HTTP request to its own route to continue where it stopped, and
-each request gets a fresh 300-second limit. Alternatively, sources can be spread
-over several staggered daily cron jobs (up to 100 per project).
+each request gets a fresh 300-second limit.
 
 ## Login
 
@@ -365,7 +375,7 @@ Only one person can sign in: the owner, with the Google account named in
 - **Protected by default.** [`apps/web/src/proxy.ts`](apps/web/src/proxy.ts)
   runs before every route. Without an allowed session, pages redirect to
   `/sign-in` and API routes answer `401`. Only `/sign-in`, Better Auth's own
-  routes under `/api/auth/`, and the cron routes `/api/cron/fetch-jobs` and
+  routes under `/api/auth/`, and the cron routes `/api/cron/fetch-jobs/<source>` and
   `/api/cron/tag-jobs` (which check
   `CRON_SECRET` itself) are public. Pages also check the session themselves.
 - **Per-user data.** The `users` table's `id` (a UUID) is what every per-user

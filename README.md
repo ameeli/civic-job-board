@@ -296,8 +296,9 @@ skipped because another run already tagged the job counts toward neither
 
 The daily check prints one line per step to the console, which Vercel keeps in
 the project's **Logs** (and `pnpm dev` prints in the terminal). Each line starts
-with `[daily-check]`, then an event name and `key=value` fields. The fetch run
-prints the `source-` lines and each tagging run the `tagging-` lines:
+with `[daily-check]`, then an event name and `key=value` fields. Each fetch run
+prints the `source-` lines for its source, and each tagging run prints the
+`tagging-` lines. Examples from the separate runs:
 
 ```
 [daily-check] source-start source=tech-jobs-for-gov

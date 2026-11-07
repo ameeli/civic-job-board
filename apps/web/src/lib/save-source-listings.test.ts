@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { jobListings, sourceRuns, type Db } from "@civic-job-board/db";
 import { createTestDb } from "@civic-job-board/db/testing";
-import { saveSourceListings } from "./save-source-listings";
+import { NO_LISTINGS_ERROR, saveSourceListings } from "./save-source-listings";
 
 let db: Db;
 
@@ -36,6 +36,11 @@ it("records a failed fetch instead of throwing", async () => {
   const run = await saveSourceListings(db, "example-board", async () => { throw new Error("Example: HTTP 503"); }, toListing);
   expect(run).toMatchObject({ ok: false, seen: 0, new: 0, error: "Example: HTTP 503" });
   expect(logLines()).toContainEqual(expect.stringMatching(/ ok=false fetched=0 saved=0 new=0 error="Example: HTTP 503" duration_ms=\d+$/));
+});
+
+it("records a fetch with no listings as failed", async () => {
+  expect(await saveSourceListings(db, "example-board", async () => [], toListing))
+    .toMatchObject({ ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR });
 });
 
 it("keeps earlier saves when a later listing fails to map", async () => {

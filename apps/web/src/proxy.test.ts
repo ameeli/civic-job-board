@@ -93,7 +93,10 @@ describe("proxy", () => {
     ]);
   });
 
-  it.each(["/sign-in", "/api/auth/callback/google", "/api/auth/get-session", "/api/cron/fetch-jobs", "/api/cron/tag-jobs"])(
+  it.each([
+    "/sign-in", "/api/auth/callback/google", "/api/auth/get-session",
+    "/api/cron/fetch-jobs/tech-jobs-for-gov", "/api/cron/fetch-jobs/tech-jobs-for-good", "/api/cron/tag-jobs",
+  ])(
     "leaves %s public without checking for a session",
     async (path) => {
       const response = await proxy(request(path));
@@ -109,14 +112,18 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/api/authx")).toBe(false);
     expect(isPublicPath("/api/auth")).toBe(false);
     expect(isPublicPath("/sign-in/extra")).toBe(false);
-    expect(isPublicPath("/api/cron/fetch-jobs/extra")).toBe(false);
+    expect(isPublicPath("/api/cron/fetch-jobs")).toBe(false);
+    expect(isPublicPath("/api/cron/fetch-jobs/")).toBe(false);
+    expect(isPublicPath("/api/cron/fetch-jobs/tech-jobs-for-gov/extra")).toBe(false);
+    expect(isPublicPath("/api/cron/fetch-jobsx/tech-jobs-for-gov")).toBe(false);
+    expect(isPublicPath("/api/cron/tag-jobs/extra")).toBe(false);
     expect(isPublicPath("/api/cron/daily")).toBe(false);
     expect(isPublicPath("/api/cron/other")).toBe(false);
   });
 });
 
 describe("proxy matcher", () => {
-  it.each(["/", "/sign-in", "/api/jobs", "/api/cron/tag-jobs", "/jobs/123"])(
+  it.each(["/", "/sign-in", "/api/jobs", "/api/cron/fetch-jobs/tech-jobs-for-gov", "/api/cron/tag-jobs", "/jobs/123"])(
     "runs the proxy on %s",
     (url) => {
       expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);

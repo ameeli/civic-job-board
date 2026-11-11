@@ -2,13 +2,16 @@ import { NextResponse, type NextRequest } from "next/server";
 import { allowedSession, getAuth } from "@/lib/auth";
 
 // Everything else requires a signed-in, allowed session.
-const PUBLIC_PATHS = new Set(["/sign-in", "/api/cron/fetch-jobs", "/api/cron/tag-jobs"]);
+const PUBLIC_PATHS = new Set(["/sign-in", "/api/cron/tag-jobs"]);
 const PUBLIC_PREFIXES = ["/api/auth/"];
+// One fetch route per source; the route itself rejects unknown sources.
+const FETCH_CRON_PATH = /^\/api\/cron\/fetch-jobs\/[^/]+$/;
 
 export function isPublicPath(pathname: string): boolean {
   return (
     PUBLIC_PATHS.has(pathname) ||
-    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+    FETCH_CRON_PATH.test(pathname)
   );
 }
 

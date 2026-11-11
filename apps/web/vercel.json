@@ -2,8 +2,20 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "path": "/api/cron/fetch-jobs",
+      "path": "/api/cron/fetch-jobs/tech-jobs-for-gov",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-jobs/civic-tech-field-guide",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-jobs/diversify-tech",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-jobs/tech-jobs-for-good",
+      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/tag-jobs",

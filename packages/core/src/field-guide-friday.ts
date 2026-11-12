@@ -4,8 +4,6 @@ import { fetchFromSource } from "./fetch-from-source";
 export const FGF_SOURCE = "field-guide-friday";
 // Field Guide Friday's public Mailchimp archive as RSS: its 10 newest issues, newest first, each the full email.
 const FEED = "https://us19.campaign-archive.com/feed?u=cdb853c4847acff0d0a09460d&id=ca5a70438b";
-/** Only issues sent this recently are read, so jobs from old issues are not saved. */
-const ISSUE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 /** Each job is one paragraph: `💼 <a href="apply link">Title</a>, Employer<br>salary | location | Apply by MM-DD-YYYY`. */
 const JOB_MARK = "💼";
 const DEADLINE = /^Apply by\s+/i;
@@ -43,14 +41,12 @@ function readIssueJobs(issueHtml: string, issue: Pick<FgfJob, "issueUrl" | "issu
   });
 }
 
-/** Every job the feed's issues sent at or after `since` list, each once, from the oldest issue that lists it. */
-export function readFeedJobs(feedXml: string, since: Date): FgfJob[] {
+/** Every job the feed's issues list, each once, from the oldest issue that lists it. */
+export function readFeedJobs(feedXml: string): FgfJob[] {
   const $ = load(feedXml, { xml: true });
   const jobs = new Map<string, FgfJob>();
   for (const item of $("item").toArray().reverse()) {
     const issue = { issueUrl: $(item).children("link").text().trim(), issueSentAt: new Date($(item).children("pubDate").text()) };
-    // An issue without a readable send date is outside the window too.
-    if (!(issue.issueSentAt >= since)) continue;
     for (const job of readIssueJobs($(item).children("description").text(), issue)) {
       if (!jobs.has(jobKey(job))) jobs.set(jobKey(job), job);
     }
@@ -74,13 +70,13 @@ export function mapFgfListing(job: FgfJob) {
     description: "",
     applyUrl: job.applyUrl,
     sourceUrl: job.issueUrl,
-    postedAt: job.issueSentAt,
+    postedAt: Number.isNaN(job.issueSentAt.getTime()) ? null : job.issueSentAt,
     deadline: deadline?.replace(DEADLINE, "") || null,
   };
 }
 
-/** Every job the issues of the last 14 days list. */
-export async function fetchFgfJobs(fetcher = fetch, now = new Date()): Promise<FgfJob[]> {
+/** Every job the archive feed lists. */
+export async function fetchFgfJobs(fetcher = fetch): Promise<FgfJob[]> {
   const feed = await (await fetchFromSource("Field Guide Friday feed", FEED, fetcher)).text();
-  return readFeedJobs(feed, new Date(now.getTime() - ISSUE_WINDOW_MS));
+  return readFeedJobs(feed);
 }

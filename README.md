@@ -210,7 +210,7 @@ commands above run these same functions. Other sources come in later slices.
   weekly newsletter, from its public Mailchimp archive feed
   (`https://us19.campaign-archive.com/feed?u=cdb853c4847acff0d0a09460d&id=ca5a70438b`),
   which carries the 10 newest issues in full; one check makes one request and
-  reads the issues sent in the last 14 days.
+  reads all 10 issues.
   Each job is a paragraph starting with 💼, as an issue's "Open Jobs" section
   lists them,
   for example `💼 Program Officer, AI Model Safety, OpenAI Foundation` over
@@ -219,7 +219,7 @@ commands above run these same functions. Other sources come in later slices.
   employer; the line below gives the salary, location, and deadline as the
   newsletter's text, each optional, and a single part besides the deadline is
   the location. A job listed again with the same apply link and title is one
-  listing, from the oldest of those issues that lists it: the source link is
+  listing, from the oldest issue in the feed that lists it: the source link is
   that issue and the posted date is when it was sent. There is no description.
 - **Diversify Tech** (`diversify-tech`): every job page its jobs sitemap
   (`https://jobs.diversifytech.com/sitemap-jobs.xml`) lists, one request a

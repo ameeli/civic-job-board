@@ -8,6 +8,7 @@
     "./civic-tech-field-guide": "./src/civic-tech-field-guide.ts",
     "./diversify-tech": "./src/diversify-tech.ts",
     "./tech-jobs-for-good": "./src/tech-jobs-for-good.ts",
+    "./dscovery": "./src/dscovery.ts",
     "./job-tags": "./src/job-tags.ts"
   },
   "scripts": {

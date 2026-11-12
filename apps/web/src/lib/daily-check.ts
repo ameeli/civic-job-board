@@ -1,4 +1,5 @@
 import { CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing } from "@civic-job-board/core/civic-tech-field-guide";
+import { fetchFgfJobs, FGF_SOURCE, mapFgfListing } from "@civic-job-board/core/field-guide-friday";
 import { DIVERSIFY_SOURCE, fetchDiversifyJobPages, mapDiversifyListing } from "@civic-job-board/core/diversify-tech";
 import { fetchTjfgJobPages, mapTjfgListing, TJFG_SOURCE } from "@civic-job-board/core/tech-jobs-for-good";
 import { fetchGovRecords, GOV_SOURCE, mapGovListing } from "@civic-job-board/core/tech-jobs-for-gov";
@@ -21,6 +22,7 @@ const RETRY_THEN_STOP_STATUSES = new Set([429, 503]);
 const SOURCE_CHECKS = {
   [GOV_SOURCE]: (db: Db) => saveSourceListings(db, GOV_SOURCE, fetchGovRecords, mapGovListing),
   [CTFG_SOURCE]: (db: Db) => saveSourceListings(db, CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing),
+  [FGF_SOURCE]: (db: Db) => saveSourceListings(db, FGF_SOURCE, fetchFgfJobs, mapFgfListing),
   [DIVERSIFY_SOURCE]: (db: Db, sleep: typeof pause) =>
     saveSourceListings(db, DIVERSIFY_SOURCE, () => fetchDiversifyJobPages(fetch, sleep), mapDiversifyListing),
   [TJFG_SOURCE]: (db: Db, sleep: typeof pause) =>

@@ -282,7 +282,7 @@ UTC schedules live in [`apps/web/vercel.json`](../apps/web/vercel.json).
 
    ```sh
    read -rs CRON_SECRET
-   for source in tech-jobs-for-gov civic-tech-field-guide diversify-tech tech-jobs-for-good; do
+   for source in tech-jobs-for-gov civic-tech-field-guide field-guide-friday diversify-tech tech-jobs-for-good; do
      curl -i -H "Authorization: Bearer $CRON_SECRET" "https://civic-job-board.vercel.app/api/cron/fetch-jobs/$source"
    done
    curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/tag-jobs

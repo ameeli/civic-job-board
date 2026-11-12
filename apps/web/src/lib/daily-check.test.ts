@@ -267,8 +267,11 @@ it("saves the free Tech Jobs for Good jobs, merges one Tech Jobs for Gov also li
   });
 });
 
-it("saves Field Guide Friday jobs, merges one Tech Jobs for Gov also lists, and fails an issue run with no jobs", async () => {
+it("saves the last 14 days' Field Guide Friday jobs, merges one Tech Jobs for Gov also lists, and fails a run with none", async () => {
   vi.stubEnv("GEMINI_API_KEY", "test-key");
+  // Eleven days after the October issue, so the September issue is outside the window.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-20T08:00:00Z"));
   const gemini = vi.fn<FakeRequest>(async () => taggedAnswer());
   const govCopy = govListing(4296, {
     title: { rendered: "Program Officer, AI Model Safety" }, meta: { _application: "https://data.org/jobs/program-officer-ai-model-safety-2/" },
@@ -280,20 +283,20 @@ it("saves Field Guide Friday jobs, merges one Tech Jobs for Gov also lists, and 
   expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
-    { source: "field-guide-friday", ok: true, seen: 4, new: 3, error: null },
+    { source: "field-guide-friday", ok: true, seen: 2, new: 1, error: null },
     { source: "diversify-tech", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
     { source: "tech-jobs-for-good", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
   ]);
   await tagUntaggedJobs(db, { sleep: async () => {} });
-  expect(gemini).toHaveBeenCalledTimes(4);
+  expect(gemini).toHaveBeenCalledTimes(2);
   expect(await readJobs(db)).toEqual(expect.arrayContaining([
     expect.objectContaining({
       title: "Program Officer, AI Model Safety", employerName: "OpenAI Foundation",
       sources: ["field-guide-friday", "tech-jobs-for-gov"], roleTags: ["security"],
     }),
     expect.objectContaining({
-      title: "Director, Measurement & Impact", sources: ["field-guide-friday"],
-      sourceUrl: "https://us19.campaign-archive.com/?u=cdb853c4847acff0d0a09460d&id=e60f696a81",
+      title: "Design Researcher", sources: ["field-guide-friday"],
+      sourceUrl: "https://us19.campaign-archive.com/?u=cdb853c4847acff0d0a09460d&id=7118ac4851",
     }),
   ]));
   // Field Guide Friday was saved last, so the merged job shows its text.
@@ -302,7 +305,7 @@ it("saves Field Guide Friday jobs, merges one Tech Jobs for Gov also lists, and 
   });
 
   expect(await fetchAndSaveSource(db, "field-guide-friday")).toMatchObject({ ok: false, seen: 0, error: NO_LISTINGS_ERROR });
-  expect(await readJobs(db)).toHaveLength(4);
+  expect(await readJobs(db)).toHaveLength(2);
 });
 
 it("saves two sources checked at the same time without either overwriting the other", async () => {

@@ -7,7 +7,7 @@ day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov, Civic Tech Field
-Guide, Diversify Tech, and free Tech Jobs for Good listings on a daily check, tags each new job once with Gemini, and has CI.
+Guide, Diversify Tech, free Tech Jobs for Good, and Diversify Tech newsletter listings on a daily check, tags each new job once with Gemini, and has CI.
 After sign-in, the home page shows a read-only list of saved jobs with their
 title, employer, and sources, ordered by posted date, newest first, with undated jobs last; tagged
 jobs also show their role, sector, and seniority tags and a one-line summary.
@@ -107,7 +107,7 @@ To try the daily check locally (Vercel does not run crons in local dev), set
 first:
 
 ```sh
-for source in tech-jobs-for-gov civic-tech-field-guide diversify-tech tech-jobs-for-good; do
+for source in tech-jobs-for-gov civic-tech-field-guide diversify-tech tech-jobs-for-good diversify-tech-newsletter; do
   curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/fetch-jobs/$source"
 done
 curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/tag-jobs
@@ -150,7 +150,7 @@ lint, typecheck, tests, and a build on every pull request and push to `main`.
 
 ## The daily check
 
-[`apps/web/vercel.json`](apps/web/vercel.json) schedules six daily cron jobs,
+[`apps/web/vercel.json`](apps/web/vercel.json) schedules seven daily cron jobs,
 each doing one thing in its own 300-second run (times in UTC), so a slow or
 stuck source cannot use up the other sources' time:
 
@@ -160,6 +160,7 @@ stuck source cannot use up the other sources' time:
 | `0 8 * * *` | `GET /api/cron/fetch-jobs/civic-tech-field-guide` | midnight to 1am |
 | `0 9 * * *` | `GET /api/cron/fetch-jobs/diversify-tech` | 1am to 2am |
 | `0 9 * * *` | `GET /api/cron/fetch-jobs/tech-jobs-for-good` | 1am to 2am |
+| `0 10 * * *` | `GET /api/cron/fetch-jobs/diversify-tech-newsletter` | 2am to 3am |
 | `0 11 * * *` | `GET /api/cron/tag-jobs` | around 3am |
 | `0 14 * * *` | `GET /api/cron/tag-jobs` | around 6am |
 
@@ -234,6 +235,18 @@ commands above run these same functions. Other sources come in later slices.
   "Application deadline:" text, or null when absent or empty; the posting's
   `validThrough`, the board's own expiry, is ignored. About 90 free jobs take
   about two minutes of its fetch run.
+- **Diversify Tech newsletter** (`diversify-tech-newsletter`): the weekly
+  issues of the last 14 days in its public RSS feed
+  (`https://rss.beehiiv.com/feeds/C62C2GAygE.xml`, one request), so a week
+  whose issue lists no outside jobs still has the week before's. Only the
+  JOBS section's "From around the web" lines are kept; its "From our job board"
+  lines are the Diversify Tech board's own jobs, which that source saves. Each
+  line is `Title, Employer, Location`: the employer is the text up to the
+  first comma and the location is the rest. The line's link, without its
+  `utm_*` parameters, is the apply link and identifies the job, so a job
+  repeated in a later issue is saved once, from the newest issue. The source
+  link is the issue and the posted date is the issue's. Salary and deadline
+  are null and the description is empty.
 
 A completed run answers HTTP 200 with its part's result: `fetch` from a fetch
 route, for its one source, and `tagging` from the tagging route. Top-level

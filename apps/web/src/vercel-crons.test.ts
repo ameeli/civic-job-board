@@ -16,8 +16,8 @@ it("schedules one fetch cron per job source", () => {
     .toEqual(JOB_SOURCES.map(source => `/api/cron/fetch-jobs/${source}`).sort());
 });
 
-it("fetches from midnight to 2am Pacific standard time, before the first tagging run", () => {
-  // UTC 08:00-09:59 is 00:00-01:59 PST (01:00-02:59 during daylight saving time).
-  for (const cron of fetchCrons) expect([8, 9]).toContain(hourOf(cron.schedule));
+it("fetches from midnight to 3am Pacific standard time, before the first tagging run", () => {
+  // UTC 08:00-10:59 is 00:00-02:59 PST (01:00-03:59 during daylight saving time).
+  for (const cron of fetchCrons) expect([8, 9, 10]).toContain(hourOf(cron.schedule));
   expect(tagCrons.map(cron => hourOf(cron.schedule))).toEqual([11, 14]);
 });

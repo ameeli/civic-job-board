@@ -7,6 +7,7 @@
     "./tech-jobs-for-gov": "./src/tech-jobs-for-gov.ts",
     "./civic-tech-field-guide": "./src/civic-tech-field-guide.ts",
     "./diversify-tech": "./src/diversify-tech.ts",
+    "./diversify-tech-newsletter": "./src/diversify-tech-newsletter.ts",
     "./tech-jobs-for-good": "./src/tech-jobs-for-good.ts",
     "./job-tags": "./src/job-tags.ts"
   },

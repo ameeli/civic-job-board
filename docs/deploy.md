@@ -282,11 +282,10 @@ UTC schedules live in [`apps/web/vercel.json`](../apps/web/vercel.json).
 
    ```sh
    read -rs CRON_SECRET
-   for source in tech-jobs-for-gov civic-tech-field-guide diversify-tech tech-jobs-for-good; do
-     curl -i -H "Authorization: Bearer $CRON_SECRET" "https://civic-job-board.vercel.app/api/cron/fetch-jobs/$source"
-   done
-   curl -i -H "Authorization: Bearer $CRON_SECRET" https://civic-job-board.vercel.app/api/cron/tag-jobs
    ```
+
+   In the same terminal, run the [README's manual daily-check commands](../README.md#local-setup),
+   replacing `http://localhost:3000` with your site address from step 3.
 
    The tagging request takes up to about 5 minutes. Inspect each response
    using [the README's daily check response contract](../README.md#the-daily-check);

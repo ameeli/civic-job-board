@@ -7,8 +7,9 @@ import ctfgFeed from "../../../../packages/core/src/fixtures/civic-tech-field-gu
 import { fetchAndSaveSource, JOB_SOURCES, tagUntaggedJobs } from "./daily-check";
 import { NO_LISTINGS_ERROR } from "./save-source-listings";
 
-// Live Diversify Tech and Tech Jobs for Good captures, 2026-11-04, the same ones the parsers' tests read.
+// Live Diversify Tech and Tech Jobs for Good captures, 2026-11-04, and Field Guide Friday, 2026-11-11, the same ones the parsers' tests read.
 const fixture = (name: string) => readFileSync(new URL(`../../../../packages/core/src/fixtures/${name}`, import.meta.url), "utf8");
+const fgfFeed = fixture("field-guide-friday-feed.xml");
 const diversifySitemap = fixture("diversify-tech-sitemap-jobs.xml");
 const diversifyJobPage = fixture("diversify-tech-job-page.html");
 const tjfgJobList = fixture("tech-jobs-for-good-jobs.html");
@@ -43,19 +44,21 @@ const govListing = (id: number, fields: object = {}) => ({
 
 type FakeRequest = (url: string, init?: RequestInit) => Promise<Response>;
 const emptyCtfgFeed: FakeRequest = async () => Response.json({ items: [] });
+const emptyFgfFeed: FakeRequest = async () => new Response("<rss></rss>");
 const emptyDiversifySitemap: FakeRequest = async () => new Response("<urlset></urlset>");
 const emptyTjfgJobList: FakeRequest = async () => new Response("<html></html>");
 const noGemini: FakeRequest = async () => { throw new Error("Unexpected Gemini request"); };
 
 /** Fakes every request the daily check makes: each source, then Gemini. */
 function fakeRequests({
-  gov, ctfg = emptyCtfgFeed, diversify = emptyDiversifySitemap, tjfg = emptyTjfgJobList, gemini = noGemini,
+  gov, ctfg = emptyCtfgFeed, fgf = emptyFgfFeed, diversify = emptyDiversifySitemap, tjfg = emptyTjfgJobList, gemini = noGemini,
 }: {
-  gov: FakeRequest; ctfg?: FakeRequest; diversify?: FakeRequest; tjfg?: FakeRequest; gemini?: FakeRequest;
+  gov: FakeRequest; ctfg?: FakeRequest; fgf?: FakeRequest; diversify?: FakeRequest; tjfg?: FakeRequest; gemini?: FakeRequest;
 }) {
   vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => {
     if (url.startsWith("https://civicworkstudio.com/")) return gov(url, init);
     if (url.startsWith("https://civictech.guide/")) return ctfg(url, init);
+    if (url.startsWith("https://us19.campaign-archive.com/")) return fgf(url, init);
     if (url.startsWith("https://jobs.diversifytech.com/")) return diversify(url, init);
     if (url.startsWith("https://techjobsforgood.com/")) return tjfg(url, init);
     return gemini(url, init);
@@ -83,12 +86,13 @@ it("saves API application links, then updates missing links to null", async () =
   expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1, error: null },
     { source: "civic-tech-field-guide", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
+    { source: "field-guide-friday", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
     { source: "diversify-tech", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
     { source: "tech-jobs-for-good", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
   ]);
   expect(await db.select().from(jobs)).toMatchObject([{ applyUrl: "https://example.org/?a=1&b=2" }]);
   gov.mockResolvedValueOnce(Response.json([{ ...record, meta: {}, _job_salary: "Competitive" }]));
-  expect(await fetchEverySource(db)).toMatchObject([{ ok: true, seen: 1, new: 0 }, { ok: false }, { ok: false }, { ok: false }]);
+  expect(await fetchEverySource(db)).toMatchObject([{ ok: true, seen: 1, new: 0 }, { ok: false }, { ok: false }, { ok: false }, { ok: false }]);
   expect(gov).toHaveBeenCalledTimes(2);
   expect(await db.select().from(jobs)).toMatchObject([{ salary: "Competitive", applyUrl: null }]);
   expect(await govRuns(db)).toHaveLength(2);
@@ -103,10 +107,10 @@ it("records a source with no listings as failed without affecting the other sour
   expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2, error: null },
-    { ok: false }, { ok: false },
+    { ok: false }, { ok: false }, { ok: false },
   ]);
   expect(await fetchEverySource(db)).toMatchObject([
-    { ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" }, { ok: true }, { ok: false }, { ok: false },
+    { ok: false, seen: 0, new: 0, error: "Tech Jobs for Gov API: HTTP 503" }, { ok: true }, { ok: false }, { ok: false }, { ok: false },
   ]);
   expect(await govRuns(db)).toHaveLength(2);
 });
@@ -114,7 +118,7 @@ it("records a source with no listings as failed without affecting the other sour
 it("retains successful saves and counts them when a later listing is invalid", async () => {
   fakeRequests({ gov: async () => Response.json([record, { ...record, id: null }]) });
   expect(await fetchEverySource(db)).toMatchObject([
-    { ok: false, seen: 2, new: 1, error: "Invalid Tech Jobs for Gov listing" }, { ok: false }, { ok: false }, { ok: false },
+    { ok: false, seen: 2, new: 1, error: "Invalid Tech Jobs for Gov listing" }, { ok: false }, { ok: false }, { ok: false }, { ok: false },
   ]);
   expect(await db.select().from(jobs)).toHaveLength(1);
   expect(await govRuns(db)).toHaveLength(1);
@@ -128,6 +132,7 @@ it("saves Civic Tech Field Guide jobs and tags them with their employer", async 
   expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2, error: null },
+    { source: "field-guide-friday", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
     { source: "diversify-tech", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
     { source: "tech-jobs-for-good", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
   ]);
@@ -149,7 +154,7 @@ it("saves Civic Tech Field Guide jobs and tags them with their employer", async 
   expect(prompts).toContainEqual(expect.stringContaining("Wellcome Trust"));
   expect(await taggingRuns(db)).toMatchObject([{ ok: true, seen: 3, new: 3 }]);
 
-  expect(await fetchEverySource(db)).toMatchObject([{ new: 0 }, { ok: true, seen: 2, new: 0 }, { ok: false }, { ok: false }]);
+  expect(await fetchEverySource(db)).toMatchObject([{ new: 0 }, { ok: true, seen: 2, new: 0 }, { ok: false }, { ok: false }, { ok: false }]);
   expect(await db.select().from(jobs)).toHaveLength(3);
 });
 
@@ -163,6 +168,7 @@ it("merges a job both sources list with the same apply link and title, and tags 
   expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 2, new: 2 },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 1 },
+    { source: "field-guide-friday", ok: false },
     { source: "diversify-tech", ok: false },
     { source: "tech-jobs-for-good", ok: false },
   ]);
@@ -194,6 +200,7 @@ it("saves Diversify Tech jobs, merges one Tech Jobs for Gov also lists, and tags
   expect(await fetchEverySource(db, { sleep })).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
+    { source: "field-guide-friday", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
     { source: "diversify-tech", ok: true, seen: 2, new: 1, error: null },
     { source: "tech-jobs-for-good", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
   ]);
@@ -238,6 +245,7 @@ it("saves the free Tech Jobs for Good jobs, merges one Tech Jobs for Gov also li
   expect(await fetchEverySource(db, { sleep })).toMatchObject([
     { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
     { source: "civic-tech-field-guide", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
+    { source: "field-guide-friday", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
     { source: "diversify-tech", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
     { source: "tech-jobs-for-good", ok: true, seen: 2, new: 1, error: null },
   ]);
@@ -257,6 +265,44 @@ it("saves the free Tech Jobs for Good jobs, merges one Tech Jobs for Gov also li
   expect((await db.select().from(jobs)).find(job => job.title === "Senior Full Stack Web Engineer")).toMatchObject({
     salary: "$105,000 - $120,000 Per Year", location: "Medford, MA / Boston, MA / Remote (Select US States)", deadline: null,
   });
+});
+
+it("saves the archive feed’s Field Guide Friday jobs, merges one Tech Jobs for Gov also lists, and fails a run with none", async () => {
+  vi.stubEnv("GEMINI_API_KEY", "test-key");
+  const gemini = vi.fn<FakeRequest>(async () => taggedAnswer());
+  const govCopy = govListing(4296, {
+    title: { rendered: "Program Officer, AI Model Safety" }, meta: { _application: "https://data.org/jobs/program-officer-ai-model-safety-2/" },
+  });
+  const fgf = vi.fn<FakeRequest>().mockResolvedValueOnce(new Response(fgfFeed))
+    .mockResolvedValueOnce(new Response(fgfFeed.replace(/💼/g, "")));
+  fakeRequests({ gov: async () => Response.json([govCopy]), fgf, gemini });
+
+  expect(await fetchEverySource(db)).toMatchObject([
+    { source: "tech-jobs-for-gov", ok: true, seen: 1, new: 1 },
+    { source: "civic-tech-field-guide", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
+    { source: "field-guide-friday", ok: true, seen: 4, new: 3, error: null },
+    { source: "diversify-tech", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
+    { source: "tech-jobs-for-good", ok: false, seen: 0, error: NO_LISTINGS_ERROR },
+  ]);
+  await tagUntaggedJobs(db, { sleep: async () => {} });
+  expect(gemini).toHaveBeenCalledTimes(4);
+  expect(await readJobs(db)).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      title: "Program Officer, AI Model Safety", employerName: "OpenAI Foundation",
+      sources: ["field-guide-friday", "tech-jobs-for-gov"], roleTags: ["security"],
+    }),
+    expect.objectContaining({
+      title: "Design Researcher", sources: ["field-guide-friday"],
+      sourceUrl: "https://us19.campaign-archive.com/?u=cdb853c4847acff0d0a09460d&id=7118ac4851",
+    }),
+  ]));
+  // Field Guide Friday was saved last, so the merged job shows its text.
+  expect((await db.select().from(jobs)).find(job => job.title === "Program Officer, AI Model Safety")).toMatchObject({
+    salary: "$220,000 - $300,000", location: "Hybrid (San Francisco, CA)", deadline: "10-30-2026",
+  });
+
+  expect(await fetchAndSaveSource(db, "field-guide-friday")).toMatchObject({ ok: false, seen: 0, error: NO_LISTINGS_ERROR });
+  expect(await readJobs(db)).toHaveLength(4);
 });
 
 it("saves two sources checked at the same time without either overwriting the other", async () => {
@@ -307,11 +353,12 @@ it("records each source's run, failed or not, and keeps the jobs a successful ch
   expect(await fetchEverySource(db)).toMatchObject([
     { source: "tech-jobs-for-gov", ok: false, error: "Tech Jobs for Gov API: HTTP 503" },
     { source: "civic-tech-field-guide", ok: true, seen: 2, new: 2 },
+    { source: "field-guide-friday", ok: false },
     { source: "diversify-tech", ok: false },
     { source: "tech-jobs-for-good", ok: false },
   ]);
   expect(await fetchEverySource(db)).toMatchObject([
-    { ok: false }, { source: "civic-tech-field-guide", ok: false, seen: 0, error: "Civic Tech Field Guide feed: HTTP 429" }, { ok: false }, { ok: false },
+    { ok: false }, { source: "civic-tech-field-guide", ok: false, seen: 0, error: "Civic Tech Field Guide feed: HTTP 429" }, { ok: false }, { ok: false }, { ok: false },
   ]);
   expect(await govRuns(db)).toHaveLength(2);
   expect(await ctfgRuns(db)).toHaveLength(2);
@@ -322,10 +369,10 @@ it("records skipped tagging when GEMINI_API_KEY is unset while the source check 
   const gov = vi.fn().mockResolvedValueOnce(Response.json([record]));
   fakeRequests({ gov });
   expect(await fetchEverySource(db)).toMatchObject([
-    { source: "tech-jobs-for-gov", ok: true, new: 1 }, { ok: false }, { ok: false }, { ok: false },
+    { source: "tech-jobs-for-gov", ok: true, new: 1 }, { ok: false }, { ok: false }, { ok: false }, { ok: false },
   ]);
   await tagUntaggedJobs(db);
-  expect(fetch).toHaveBeenCalledTimes(4);
+  expect(fetch).toHaveBeenCalledTimes(5);
   expect(await taggingRuns(db)).toMatchObject([{ ok: false, seen: 0, new: 0, error: "GEMINI_API_KEY is not set; tagging skipped" }]);
   expect(logLines()).toContainEqual("[daily-check] tagging-skipped reason=missing-api-key");
   expect(await db.select().from(jobs)).toMatchObject([{ roleTags: null, taggedAt: null }]);
@@ -355,6 +402,8 @@ it("tags each new job once with a fake Gemini and leaves failed requests for the
     expect.stringMatching(/^\[daily-check\] source-done source=tech-jobs-for-gov ok=true fetched=3 saved=3 new=3 duration_ms=\d+$/),
     "[daily-check] source-start source=civic-tech-field-guide",
     expect.stringMatching(/^\[daily-check\] source-done source=civic-tech-field-guide ok=false fetched=0 saved=0 new=0 error="No listings found" duration_ms=\d+$/),
+    "[daily-check] source-start source=field-guide-friday",
+    expect.stringMatching(/^\[daily-check\] source-done source=field-guide-friday ok=false fetched=0 saved=0 new=0 error="No listings found" duration_ms=\d+$/),
     "[daily-check] source-start source=diversify-tech",
     expect.stringMatching(/^\[daily-check\] source-done source=diversify-tech ok=false fetched=0 saved=0 new=0 error="No listings found" duration_ms=\d+$/),
     "[daily-check] source-start source=tech-jobs-for-good",

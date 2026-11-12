@@ -7,7 +7,7 @@ day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov, Civic Tech Field
-Guide, Diversify Tech, and free Tech Jobs for Good listings on a daily check, tags each new job once with Gemini, and has CI.
+Guide (its job board and its Field Guide Friday newsletter), Diversify Tech, and free Tech Jobs for Good listings on a daily check, tags each new job once with Gemini, and has CI.
 After sign-in, the home page shows a read-only list of saved jobs with their
 title, employer, and sources, ordered by posted date, newest first, with undated jobs last; tagged
 jobs also show their role, sector, and seniority tags and a one-line summary.
@@ -107,7 +107,7 @@ To try the daily check locally (Vercel does not run crons in local dev), set
 first:
 
 ```sh
-for source in tech-jobs-for-gov civic-tech-field-guide diversify-tech tech-jobs-for-good; do
+for source in tech-jobs-for-gov civic-tech-field-guide field-guide-friday diversify-tech tech-jobs-for-good; do
   curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/fetch-jobs/$source"
 done
 curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/tag-jobs
@@ -150,7 +150,7 @@ lint, typecheck, tests, and a build on every pull request and push to `main`.
 
 ## The daily check
 
-[`apps/web/vercel.json`](apps/web/vercel.json) schedules six daily cron jobs,
+[`apps/web/vercel.json`](apps/web/vercel.json) schedules seven daily cron jobs,
 each doing one thing in its own 300-second run (times in UTC), so a slow or
 stuck source cannot use up the other sources' time:
 
@@ -158,6 +158,7 @@ stuck source cannot use up the other sources' time:
 | --- | --- | --- |
 | `0 8 * * *` | `GET /api/cron/fetch-jobs/tech-jobs-for-gov` | midnight to 1am |
 | `0 8 * * *` | `GET /api/cron/fetch-jobs/civic-tech-field-guide` | midnight to 1am |
+| `0 8 * * *` | `GET /api/cron/fetch-jobs/field-guide-friday` | midnight to 1am |
 | `0 9 * * *` | `GET /api/cron/fetch-jobs/diversify-tech` | 1am to 2am |
 | `0 9 * * *` | `GET /api/cron/fetch-jobs/tech-jobs-for-good` | 1am to 2am |
 | `0 11 * * *` | `GET /api/cron/tag-jobs` | around 3am |
@@ -205,6 +206,22 @@ commands above run these same functions. Other sources come in later slices.
   board's other text: organization summary, organization type, categories, and
   issues. The data is [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
   The feed allows 300 requests per minute; one check makes one request.
+- **Field Guide Friday** (`field-guide-friday`): the Civic Tech Field Guide's
+  weekly newsletter, from its public Mailchimp archive feed
+  (`https://us19.campaign-archive.com/feed?u=cdb853c4847acff0d0a09460d&id=ca5a70438b`),
+  which carries the 10 newest issues in full; one check makes one request and
+  reads all 10 issues.
+  Each job is a paragraph starting with 💼, as an issue's "Open Jobs" section
+  lists them,
+  for example `💼 Program Officer, AI Model Safety, OpenAI Foundation` over
+  `$220,000 - $300,000 | Hybrid (San Francisco, CA) | Apply by 10-30-2026`.
+  The linked title gives the title and apply link and the text after it the
+  employer; the line below gives the salary, location, and deadline as the
+  newsletter's text, each optional, and a single part besides the deadline is
+  the location. A job listed again with the same apply link and title is one
+  listing, from the oldest issue in the feed that lists it: the source link is
+  that issue and the posted date is when it was sent, or null if its send date
+  is unreadable. There is no description.
 - **Diversify Tech** (`diversify-tech`): every job page its jobs sitemap
   (`https://jobs.diversifytech.com/sitemap-jobs.xml`) lists, one request a
   second as its `robots.txt` asks; nothing under the disallowed `/api/` is

@@ -353,7 +353,7 @@ it("saves the newsletter's outside jobs, merges one Tech Jobs for Gov also lists
   ]));
 });
 
-it("saves Field Guide Friday jobs, merges one Tech Jobs for Gov also lists, and fails an issue run with no jobs", async () => {
+it("saves the archive feed’s Field Guide Friday jobs, merges one Tech Jobs for Gov also lists, and fails a run with none", async () => {
   vi.stubEnv("GEMINI_API_KEY", "test-key");
   const gemini = vi.fn<FakeRequest>(async () => taggedAnswer());
   const govCopy = govListing(4296, {
@@ -380,8 +380,8 @@ it("saves Field Guide Friday jobs, merges one Tech Jobs for Gov also lists, and 
       sources: ["field-guide-friday", "tech-jobs-for-gov"], roleTags: ["security"],
     }),
     expect.objectContaining({
-      title: "Director, Measurement & Impact", sources: ["field-guide-friday"],
-      sourceUrl: "https://us19.campaign-archive.com/?u=cdb853c4847acff0d0a09460d&id=e60f696a81",
+      title: "Design Researcher", sources: ["field-guide-friday"],
+      sourceUrl: "https://us19.campaign-archive.com/?u=cdb853c4847acff0d0a09460d&id=7118ac4851",
     }),
   ]));
   // Field Guide Friday was saved last, so the merged job shows its text.

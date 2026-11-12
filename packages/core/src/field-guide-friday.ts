@@ -16,7 +16,7 @@ export interface FgfJob {
   /** The line under the title: salary, location, and deadline, each optional, split by `|`. */
   details: string;
   issueUrl: string;
-  issueSentAt: string;
+  issueSentAt: Date;
 }
 
 /** A job is the same in every issue that lists it with the same apply link and title. */
@@ -46,7 +46,7 @@ export function readFeedJobs(feedXml: string): FgfJob[] {
   const $ = load(feedXml, { xml: true });
   const jobs = new Map<string, FgfJob>();
   for (const item of $("item").toArray().reverse()) {
-    const issue = { issueUrl: $(item).children("link").text().trim(), issueSentAt: $(item).children("pubDate").text().trim() };
+    const issue = { issueUrl: $(item).children("link").text().trim(), issueSentAt: new Date($(item).children("pubDate").text()) };
     for (const job of readIssueJobs($(item).children("description").text(), issue)) {
       if (!jobs.has(jobKey(job))) jobs.set(jobKey(job), job);
     }
@@ -60,7 +60,6 @@ export function mapFgfListing(job: FgfJob) {
   const deadline = details.find(part => DEADLINE.test(part));
   // The location is the last part before the deadline; a salary, when given, comes first.
   const salaryAndLocation = details.filter(part => part !== deadline);
-  const sentAt = new Date(job.issueSentAt);
   return {
     source: FGF_SOURCE,
     sourceJobId: jobKey(job),
@@ -71,11 +70,12 @@ export function mapFgfListing(job: FgfJob) {
     description: "",
     applyUrl: job.applyUrl,
     sourceUrl: job.issueUrl,
-    postedAt: Number.isNaN(sentAt.getTime()) ? null : sentAt,
+    postedAt: Number.isNaN(job.issueSentAt.getTime()) ? null : job.issueSentAt,
     deadline: deadline?.replace(DEADLINE, "") || null,
   };
 }
 
+/** Every job the archive feed lists. */
 export async function fetchFgfJobs(fetcher = fetch): Promise<FgfJob[]> {
   const feed = await (await fetchFromSource("Field Guide Friday feed", FEED, fetcher)).text();
   return readFeedJobs(feed);

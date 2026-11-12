@@ -54,9 +54,22 @@ describe("Field Guide Friday", () => {
     expect(() => mapFgfListing({ ...job!, applyUrl: "" })).toThrow("Invalid Field Guide Friday listing");
   });
 
+  it("keeps jobs with unreadable issue dates and maps their posted dates to null", () => {
+    const jobs = readFeedJobs(feed.replace("Fri, 09 Oct 2026 15:08:47 +0000", "soon"));
+    expect(jobs).toHaveLength(4);
+    expect(jobs[2]!.issueSentAt).toBeInstanceOf(Date);
+    expect(jobs.map(mapFgfListing).map(job => job.postedAt)).toEqual([
+      new Date("2026-09-11T14:47:04Z"), new Date("2026-09-11T14:47:04Z"), null, null,
+    ]);
+  });
+
   it("fetches the newsletter's archive feed and reports feed failures", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(feed));
-    expect(await fetchFgfJobs(fetcher)).toHaveLength(4);
+    const fetcher = vi.fn().mockImplementation(async () => new Response(feed));
+    expect(await fetchFgfJobs(fetcher)).toMatchObject([
+      { title: "Director, Measurement & Impact" },
+      { title: "Presidential Postdoctoral Fellow/Assistant Professor - Privacy and Technology" },
+      { title: "Design Researcher" }, { title: "Program Officer, AI Model Safety" },
+    ]);
     expect(fetcher.mock.calls[0]?.[0]).toBe(FEED_URL);
     await expect(fetchFgfJobs(vi.fn().mockResolvedValue(new Response("", { status: 503 }))))
       .rejects.toThrow("Field Guide Friday feed: HTTP 503");

@@ -211,7 +211,8 @@ commands above run these same functions. Other sources come in later slices.
 - **Field Guide Friday** (`field-guide-friday`): the Civic Tech Field Guide's
   weekly newsletter, from its public Mailchimp archive feed
   (`https://us19.campaign-archive.com/feed?u=cdb853c4847acff0d0a09460d&id=ca5a70438b`),
-  which carries the 10 newest issues in full; one check makes one request.
+  which carries the 10 newest issues in full; one check makes one request and
+  reads all 10 issues.
   Each job is a paragraph starting with 💼, as an issue's "Open Jobs" section
   lists them,
   for example `💼 Program Officer, AI Model Safety, OpenAI Foundation` over

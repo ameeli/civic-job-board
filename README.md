@@ -220,7 +220,8 @@ commands above run these same functions. Other sources come in later slices.
   newsletter's text, each optional, and a single part besides the deadline is
   the location. A job listed again with the same apply link and title is one
   listing, from the oldest issue in the feed that lists it: the source link is
-  that issue and the posted date is when it was sent. There is no description.
+  that issue and the posted date is when it was sent, or null if its send date
+  is unreadable. There is no description.
 - **Diversify Tech** (`diversify-tech`): every job page its jobs sitemap
   (`https://jobs.diversifytech.com/sitemap-jobs.xml`) lists, one request a
   second as its `robots.txt` asks; nothing under the disallowed `/api/` is

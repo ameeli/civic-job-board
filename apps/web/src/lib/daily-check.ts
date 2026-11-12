@@ -1,6 +1,7 @@
 import { CTFG_SOURCE, fetchCtfgFeedItems, mapCtfgListing } from "@civic-job-board/core/civic-tech-field-guide";
 import { DSCOVERY_SOURCE, fetchDscoveryJobs, mapDscoveryListing } from "@civic-job-board/core/dscovery";
 import { DIVERSIFY_SOURCE, fetchDiversifyJobPages, mapDiversifyListing } from "@civic-job-board/core/diversify-tech";
+import { DT_NEWSLETTER_SOURCE, fetchNewsletterJobs, mapNewsletterListing } from "@civic-job-board/core/diversify-tech-newsletter";
 import { fetchTjfgJobPages, mapTjfgListing, TJFG_SOURCE } from "@civic-job-board/core/tech-jobs-for-good";
 import { fetchGovRecords, GOV_SOURCE, mapGovListing } from "@civic-job-board/core/tech-jobs-for-gov";
 import { pause } from "@civic-job-board/core";
@@ -27,6 +28,7 @@ const SOURCE_CHECKS = {
   [TJFG_SOURCE]: (db: Db, sleep: typeof pause) =>
     saveSourceListings(db, TJFG_SOURCE, () => fetchTjfgJobPages(fetch, sleep), mapTjfgListing),
   [DSCOVERY_SOURCE]: (db: Db) => saveSourceListings(db, DSCOVERY_SOURCE, fetchDscoveryJobs, mapDscoveryListing),
+  [DT_NEWSLETTER_SOURCE]: (db: Db) => saveSourceListings(db, DT_NEWSLETTER_SOURCE, () => fetchNewsletterJobs(), mapNewsletterListing),
 };
 
 /** A job board source the fetch route checks, by its `source_runs` name. */

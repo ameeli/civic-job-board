@@ -7,7 +7,7 @@ day and merges the jobs it finds into one email-style inbox.
 
 This repository is currently a **skeleton**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov, Civic Tech Field
-Guide, Diversify Tech, and free Tech Jobs for Good listings on a daily check, tags each new job once with Gemini, and has CI.
+Guide, Diversify Tech, free Tech Jobs for Good, and DSCovery listings on a daily check, tags each new job once with Gemini, and has CI.
 After sign-in, the home page shows a read-only list of saved jobs with their
 title, employer, and sources, ordered by posted date, newest first, with undated jobs last; tagged
 jobs also show their role, sector, and seniority tags and a one-line summary.
@@ -107,7 +107,7 @@ To try the daily check locally (Vercel does not run crons in local dev), set
 first:
 
 ```sh
-for source in tech-jobs-for-gov civic-tech-field-guide diversify-tech tech-jobs-for-good; do
+for source in tech-jobs-for-gov civic-tech-field-guide diversify-tech tech-jobs-for-good dscovery; do
   curl -H "Authorization: Bearer $CRON_SECRET" "http://localhost:3000/api/cron/fetch-jobs/$source"
 done
 curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/tag-jobs
@@ -150,7 +150,7 @@ lint, typecheck, tests, and a build on every pull request and push to `main`.
 
 ## The daily check
 
-[`apps/web/vercel.json`](apps/web/vercel.json) schedules six daily cron jobs,
+[`apps/web/vercel.json`](apps/web/vercel.json) schedules seven daily cron jobs,
 each doing one thing in its own 300-second run (times in UTC), so a slow or
 stuck source cannot use up the other sources' time:
 
@@ -160,6 +160,7 @@ stuck source cannot use up the other sources' time:
 | `0 8 * * *` | `GET /api/cron/fetch-jobs/civic-tech-field-guide` | midnight to 1am |
 | `0 9 * * *` | `GET /api/cron/fetch-jobs/diversify-tech` | 1am to 2am |
 | `0 9 * * *` | `GET /api/cron/fetch-jobs/tech-jobs-for-good` | 1am to 2am |
+| `0 10 * * *` | `GET /api/cron/fetch-jobs/dscovery` | 2am to 3am |
 | `0 11 * * *` | `GET /api/cron/tag-jobs` | around 3am |
 | `0 14 * * *` | `GET /api/cron/tag-jobs` | around 6am |
 
@@ -234,6 +235,17 @@ commands above run these same functions. Other sources come in later slices.
   "Application deadline:" text, or null when absent or empty; the posting's
   `validThrough`, the board's own expiry, is ignored. About 90 free jobs take
   about two minutes of its fetch run.
+- **DSCovery** (`dscovery`): jobs from Digital Services Coalition member
+  firms' career pages, read from one request for its home page
+  (`https://dscovery.fly.dev/`), whose "All Jobs" tables list every open job,
+  one table per employer; its RSS feed, which carries only the 50 newest, is not
+  requested. The source job id is the row's DSCovery job id. The title, apply
+  link, and location are the row's text and link, with an `Unknown` location
+  kept as null; the employer is the table's caption, and the description is the
+  row's practice tag, for example `Practice: Engineering & Development`. The
+  source link is the job's DSCovery page (`/jobs/<id>/`). The board shows no
+  salary or deadline and dates a job only as how long ago it found it, such as
+  `About 3 weeks ago`, so posted dates are null.
 
 A completed run answers HTTP 200 with its part's result: `fetch` from a fetch
 route, for its one source, and `tagging` from the tagging route. Top-level
@@ -309,6 +321,8 @@ prints the `source-` lines for its source, and each tagging run prints the
 [daily-check] source-done source=diversify-tech ok=true fetched=16 saved=16 new=1 duration_ms=20851
 [daily-check] source-start source=tech-jobs-for-good
 [daily-check] source-done source=tech-jobs-for-good ok=true fetched=90 saved=90 new=4 duration_ms=115283
+[daily-check] source-start source=dscovery
+[daily-check] source-done source=dscovery ok=true fetched=279 saved=279 new=5 duration_ms=6120
 [daily-check] tagging-start selected=31 cap=35
 [daily-check] tagging-job n=1/31 job_id=<uuid> outcome=tagged attempts=1 duration_ms=1840
 [daily-check] tagging-retry job_id=<uuid> attempt=2 status=503 wait_s=30

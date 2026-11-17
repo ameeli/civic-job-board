@@ -10,6 +10,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/fetch-jobs/field-guide-friday",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/fetch-jobs/diversify-tech",
       "schedule": "0 9 * * *"
     },

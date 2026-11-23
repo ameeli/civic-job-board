@@ -402,26 +402,33 @@ a {
 
 /* Job detail sheet: slides in from the right over the home page */
 
-.sheet-scrim {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
+.sheet::backdrop {
   background: rgb(40 33 20 / 0.3);
 }
 
 .sheet {
   position: fixed;
-  z-index: 11;
   top: 0;
   right: 0;
   bottom: 0;
-  display: flex;
   flex-direction: column;
   width: min(800px, calc(100% - 56px));
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--ink);
   background: var(--surface);
+  border: 0;
   border-left: 1px solid var(--line);
   box-shadow: -24px 0 64px rgb(60 45 20 / 0.2);
   animation: sheet-slide-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sheet[open] {
+  display: flex;
 }
 
 @keyframes sheet-slide-in {

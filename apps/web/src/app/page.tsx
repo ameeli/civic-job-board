@@ -71,7 +71,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           </p>
         )}
       </main>
-      {openJob !== undefined && <JobDetailSheet job={openJob} />}
+      {openJob !== undefined && <JobDetailSheet job={openJob} openerId={`job-${openJobId}`} />}
     </>
   );
 }

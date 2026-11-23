@@ -1,26 +1,23 @@
 import { jobTagLabels } from "@civic-job-board/core/job-tags";
 import type { readJob } from "@civic-job-board/db";
 import Link from "next/link";
+import { SheetDialog } from "./sheet-dialog";
 
 type Job = NonNullable<Awaited<ReturnType<typeof readJob>>>;
 
 const postedDate = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
 
 /** The job detail sheet over the home page; null `job` shows a not-found state. */
-export function JobDetailSheet({ job }: { job: Job | null }) {
+export function JobDetailSheet({ job, openerId }: { job: Job | null; openerId: string }) {
   return (
-    <>
-      {/* The scrim is a mouse convenience; the Close link is the accessible way out. */}
-      <Link href="/" scroll={false} className="sheet-scrim" aria-hidden tabIndex={-1} />
-      <aside className="sheet" aria-labelledby="sheet-title">
-        <div className="sheet-bar">
-          <Link href="/" scroll={false} className="button button-quiet">
-            Close
-          </Link>
-        </div>
-        <div className="sheet-body">{job ? <JobDetail job={job} /> : <JobNotFound />}</div>
-      </aside>
-    </>
+    <SheetDialog openerId={openerId}>
+      <div className="sheet-bar">
+        <Link href="/" scroll={false} className="button button-quiet">
+          Close
+        </Link>
+      </div>
+      <div className="sheet-body">{job ? <JobDetail job={job} /> : <JobNotFound />}</div>
+    </SheetDialog>
   );
 }
 

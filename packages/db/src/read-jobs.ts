@@ -14,3 +14,15 @@ export function readJobs(db: Db) {
   }).from(jobs).innerJoin(jobListings, eq(jobListings.jobId, jobs.id)).groupBy(jobs.id)
     .orderBy(sql`${jobs.postedAt} desc nulls last`, jobs.id);
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** One job with every listing of it, or null when no job has that id (including ids that are not UUIDs). */
+export async function readJob(db: Db, id: string) {
+  if (!UUID.test(id)) return null;
+  const [job] = await db.select().from(jobs).where(eq(jobs.id, id));
+  if (!job) return null;
+  const listings = await db.select({ source: jobListings.source, sourceUrl: jobListings.sourceUrl })
+    .from(jobListings).where(eq(jobListings.jobId, id)).orderBy(jobListings.source);
+  return { ...job, listings };
+}

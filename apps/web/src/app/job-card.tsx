@@ -1,10 +1,11 @@
 import { jobTagLabels } from "@civic-job-board/core/job-tags";
+import Link from "next/link";
 import type { readJobs } from "@civic-job-board/db";
 import { employerInitials, formatPostedDate, sourceName } from "@/lib/job-display";
 
 type Job = Awaited<ReturnType<typeof readJobs>>[number];
 
-/** One job in the inbox feed; the whole card opens the application link (or the listing). */
+/** One job in the inbox feed; the whole card opens the job detail sheet. */
 export function JobCard({ job }: { job: Job }) {
   const tags = job.roleTags && job.sectorTags && job.seniority
     ? jobTagLabels({ roleTags: job.roleTags, sectorTags: job.sectorTags, seniority: job.seniority })
@@ -28,7 +29,7 @@ export function JobCard({ job }: { job: Job }) {
         )}
       </div>
       <h3 className="job-card-title">
-        <a href={job.applyUrl || job.sourceUrl}>{job.title}</a>
+        <Link id={`job-${job.id}`} href={`/?job=${job.id}`} scroll={false}>{job.title}</Link>
       </h3>
       {details.length > 0 && (
         <p className="job-card-details">

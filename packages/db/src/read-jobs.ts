@@ -5,7 +5,8 @@ import { jobListings, jobs } from "./schema";
 /** Every job, newest posted first, with the sources that list it. */
 export function readJobs(db: Db) {
   return db.select({
-    id: jobs.id, title: jobs.title, employerName: jobs.employerName, applyUrl: jobs.applyUrl,
+    id: jobs.id, title: jobs.title, employerName: jobs.employerName, location: jobs.location,
+    applyUrl: jobs.applyUrl, postedAt: jobs.postedAt,
     roleTags: jobs.roleTags, sectorTags: jobs.sectorTags, seniority: jobs.seniority, summary: jobs.summary,
     sources: sql<string[]>`array_agg(distinct ${jobListings.source} order by ${jobListings.source})`,
     // Only a job with no apply link links to its listing, and such a job has one listing.

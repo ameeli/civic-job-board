@@ -147,11 +147,16 @@ export function readTaggingAnswer(response: unknown): TaggingAnswer {
   };
 }
 
-function labels(slugs: readonly string[], list: TagList): string {
-  return slugs.map(slug => list[slug]?.label ?? slug).join(", ");
-}
-
-/** One plain line of a tagged job's role, sector, and seniority labels. */
-export function describeJobTags(tags: { roleTags: readonly string[]; sectorTags: readonly string[]; seniority: string }): string {
-  return `Roles: ${labels(tags.roleTags, ROLE_TAGS)} · Sectors: ${labels(tags.sectorTags, SECTOR_TAGS)} · Seniority: ${labels([tags.seniority], SENIORITY_LEVELS)}`;
+/**
+ * Display labels for a tagged job's role, sector, and seniority tags. "unknown" says
+ * nothing about the job, so it is left out (seniority becomes null).
+ */
+export function jobTagLabels(tags: { roleTags: readonly string[]; sectorTags: readonly string[]; seniority: string }) {
+  const known = (slugs: readonly string[], list: TagList) =>
+    slugs.filter(slug => slug !== "unknown").map(slug => list[slug]?.label ?? slug);
+  return {
+    roles: known(tags.roleTags, ROLE_TAGS),
+    sectors: known(tags.sectorTags, SECTOR_TAGS),
+    seniority: known([tags.seniority], SENIORITY_LEVELS)[0] ?? null,
+  };
 }

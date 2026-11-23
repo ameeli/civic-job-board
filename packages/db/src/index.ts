@@ -12,7 +12,7 @@ export {
   type SourceRun,
   type User,
 } from "./schema";
-export { recordSourceRun } from "./source-runs";
+export { readFailingSources, recordSourceRun } from "./source-runs";
 export { findUserById } from "./users";
 export { saveListing, type JobListing } from "./save-listing";
 export { readJobs } from "./read-jobs";

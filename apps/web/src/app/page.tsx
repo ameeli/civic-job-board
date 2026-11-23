@@ -1,10 +1,11 @@
 import { CTFG_SOURCE } from "@civic-job-board/core/civic-tech-field-guide";
 import { describeJobTags } from "@civic-job-board/core/job-tags";
-import { readJobs } from "@civic-job-board/db";
+import { readFailingSources, readJobs } from "@civic-job-board/db";
 import { getDb } from "@/lib/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAllowedSession } from "@/lib/auth";
+import { JOB_SOURCES } from "@/lib/daily-check";
 import { signOut } from "./actions";
 
 export default async function HomePage() {
@@ -14,7 +15,8 @@ export default async function HomePage() {
     redirect("/sign-in");
   }
 
-  const jobs = await readJobs(getDb());
+  const db = getDb();
+  const [jobs, failingSources] = await Promise.all([readJobs(db), readFailingSources(db, JOB_SOURCES)]);
 
   return (
     <>
@@ -32,6 +34,11 @@ export default async function HomePage() {
         </div>
       </header>
       <main className="home">
+        {failingSources.length > 0 && (
+          <div className="alert" role="status">
+            Last daily check failed or found nothing for: {failingSources.join(", ")}
+          </div>
+        )}
         <h2>Saved jobs</h2>
         {jobs.length ? (
           <ul>

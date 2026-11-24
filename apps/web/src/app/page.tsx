@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAllowedSession } from "@/lib/auth";
 import { JOB_SOURCES } from "@/lib/daily-check";
+import { sourceName } from "@/lib/job-display";
 import { signOut } from "./actions";
 import { JobCard } from "./job-card";
 import { TodayHeading } from "./today-heading";
@@ -40,16 +41,15 @@ export default async function HomePage() {
           <p className="inbox-count">{jobs.length} {jobs.length === 1 ? "job" : "jobs"}</p>
         </div>
         {(sourceProblems.failed.length > 0 || sourceProblems.stale.length > 0) && (
-          <div className="alert" role="status">
+          <div className="source-banner" role="status">
             {sourceProblems.failed.length > 0 && (
-              <div>Last daily check failed or found nothing for: {sourceProblems.failed.join(", ")}</div>
+              <div>Last daily check failed or found nothing for: {sourceProblems.failed.map(sourceName).join(", ")}</div>
             )}
             {sourceProblems.stale.map(({ source, lastStartedAt }) => (
-              <div key={source}>{source}: not checked since {formatCheckDate(lastStartedAt)}</div>
+              <div key={source}>{sourceName(source)}: not checked since <span className="nowrap">{formatCheckDate(lastStartedAt)}</span></div>
             ))}
           </div>
         )}
-
         {jobs.length ? (
           <div className="job-cards">
             {jobs.map(job => <JobCard key={job.id} job={job} />)}

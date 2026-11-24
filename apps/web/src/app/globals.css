@@ -18,6 +18,9 @@
   --badge: #ebe4d5;
   --badge-ink: #574c35;
   --shadow-color: 60 45 20;
+  --warn-surface: #fbf0da;
+  --warn-line: #ecd3a1;
+  --warn-ink: #92560a;
   --danger-surface: #f8e6df;
   --danger-line: #e6c2b5;
   --danger-ink: #8a2f1b;
@@ -219,6 +222,17 @@ p {
 
 .inbox-credit a {
   color: var(--accent);
+}
+
+.source-banner {
+  display: grid;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--warn-surface);
+  border: 1px solid var(--warn-line);
+  border-radius: 16px;
+  color: var(--warn-ink);
+  font-size: 0.84375rem;
 }
 
 .job-cards {

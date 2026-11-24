@@ -102,7 +102,7 @@ it("saves API application links, then updates missing links to null", async () =
     { source: "diversify-tech-newsletter", ok: false, seen: 0, new: 0, error: NO_LISTINGS_ERROR },
   ]);
   expect(await db.select().from(jobs)).toMatchObject([{ applyUrl: "https://example.org/?a=1&b=2" }]);
-  gov.mockResolvedValueOnce(Response.json([{ ...record, meta: {}, _job_salary: "Competitive" }]));
+  gov.mockResolvedValueOnce(Response.json([{ ...record, meta: { _job_salary: "Competitive" } }]));
   expect(await fetchEverySource(db)).toMatchObject([{ ok: true, seen: 1, new: 0 }, { ok: false }, { ok: false }, { ok: false }, { ok: false }, { ok: false }, { ok: false }]);
   expect(gov).toHaveBeenCalledTimes(2);
   expect(await db.select().from(jobs)).toMatchObject([{ salary: "Competitive", applyUrl: null }]);
@@ -153,7 +153,7 @@ it("saves Civic Tech Field Guide jobs and tags them with their employer", async 
   const listed = await readJobs(db);
   expect(listed).toHaveLength(3);
   expect(listed).toEqual(expect.arrayContaining([
-    expect.objectContaining({ title: "Senior DevOps Engineer", sources: ["tech-jobs-for-gov"] }),
+    expect.objectContaining({ title: "Manager of Web and Digital Strategy", sources: ["tech-jobs-for-gov"] }),
     expect.objectContaining({
       title: "Associate Director, Strategy", employerName: "Wellcome Trust", sources: ["civic-tech-field-guide"],
       applyUrl: expect.stringContaining("myworkdayjobs.com"), sourceUrl: "https://app.civictech.guide/job?recordId=recbyxPQel9RAHEV3",

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { sourceRuns } from "./schema";
 import type { Db } from "./client";
-import { readFailingSources, recordSourceRun } from "./source-runs";
+import { readSourceProblems, recordSourceRun } from "./source-runs";
 import { createTestDb } from "./testing";
 
 describe("recordSourceRun", () => {
@@ -51,7 +51,9 @@ describe("recordSourceRun", () => {
   });
 });
 
-describe("readFailingSources", () => {
+describe("readSourceProblems", () => {
+  const now = new Date("2026-11-23T12:00:00Z");
+  const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000);
   let db: Db;
 
   beforeEach(async () => {
@@ -59,22 +61,34 @@ describe("readFailingSources", () => {
   });
 
   it("lists the sources whose latest run failed or stopped with an error", async () => {
-    const earlier = new Date("2026-11-22T12:00:00Z");
-    const later = new Date("2026-11-23T12:00:00Z");
-    await recordSourceRun(db, { source: "recovered", startedAt: earlier, ok: false, error: "HTTP 503" });
-    await recordSourceRun(db, { source: "recovered", startedAt: later, ok: true });
-    await recordSourceRun(db, { source: "broke", startedAt: earlier, ok: true });
-    await recordSourceRun(db, { source: "broke", startedAt: later, ok: false, error: "No listings found" });
-    await recordSourceRun(db, { source: "unfinished", startedAt: later, error: "Timed out" });
-    await recordSourceRun(db, { source: "running", startedAt: later });
+    await recordSourceRun(db, { source: "recovered", startedAt: hoursAgo(25), ok: false, error: "HTTP 503" });
+    await recordSourceRun(db, { source: "recovered", startedAt: hoursAgo(1), ok: true });
+    await recordSourceRun(db, { source: "broke", startedAt: hoursAgo(25), ok: true });
+    await recordSourceRun(db, { source: "broke", startedAt: hoursAgo(1), ok: false, error: "No listings found" });
+    await recordSourceRun(db, { source: "unfinished", startedAt: hoursAgo(1), error: "Timed out" });
+    await recordSourceRun(db, { source: "running", startedAt: hoursAgo(1) });
 
-    expect(await readFailingSources(db, ["recovered", "broke", "unfinished", "running", "never-run"]))
-      .toEqual(["broke", "unfinished"]);
+    expect(await readSourceProblems(db, ["recovered", "broke", "unfinished", "running", "never-run"], now))
+      .toEqual({ failed: ["broke", "unfinished"], stale: [] });
+  });
+
+  it("lists sources whose latest run started more than 36 hours ago as stale, with that start", async () => {
+    await recordSourceRun(db, { source: "fresh", startedAt: hoursAgo(36), ok: true });
+    await recordSourceRun(db, { source: "stale", startedAt: hoursAgo(37), ok: true });
+    await recordSourceRun(db, { source: "stale-and-failed", startedAt: hoursAgo(48), ok: false, error: "HTTP 503" });
+
+    expect(await readSourceProblems(db, ["fresh", "stale", "stale-and-failed"], now)).toEqual({
+      failed: [],
+      stale: [
+        { source: "stale", lastStartedAt: hoursAgo(37) },
+        { source: "stale-and-failed", lastStartedAt: hoursAgo(48) },
+      ],
+    });
   });
 
   it("ignores runs of sources it was not asked about", async () => {
-    await recordSourceRun(db, { source: "gemini-tagging", ok: false, error: "HTTP 429" });
+    await recordSourceRun(db, { source: "gemini-tagging", startedAt: hoursAgo(48), ok: false, error: "HTTP 429" });
 
-    expect(await readFailingSources(db, ["broke"])).toEqual([]);
+    expect(await readSourceProblems(db, ["broke"], now)).toEqual({ failed: [], stale: [] });
   });
 });

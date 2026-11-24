@@ -1,6 +1,6 @@
 import { CTFG_SOURCE } from "@civic-job-board/core/civic-tech-field-guide";
 import { describeJobTags } from "@civic-job-board/core/job-tags";
-import { readFailingSources, readJobs } from "@civic-job-board/db";
+import { readJobs, readSourceProblems } from "@civic-job-board/db";
 import { getDb } from "@/lib/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -16,7 +16,7 @@ export default async function HomePage() {
   }
 
   const db = getDb();
-  const [jobs, failingSources] = await Promise.all([readJobs(db), readFailingSources(db, JOB_SOURCES)]);
+  const [jobs, sourceProblems] = await Promise.all([readJobs(db), readSourceProblems(db, JOB_SOURCES, new Date())]);
 
   return (
     <>
@@ -34,9 +34,14 @@ export default async function HomePage() {
         </div>
       </header>
       <main className="home">
-        {failingSources.length > 0 && (
+        {(sourceProblems.failed.length > 0 || sourceProblems.stale.length > 0) && (
           <div className="alert" role="status">
-            Last daily check failed or found nothing for: {failingSources.join(", ")}
+            {sourceProblems.failed.length > 0 && (
+              <div>Last daily check failed or found nothing for: {sourceProblems.failed.join(", ")}</div>
+            )}
+            {sourceProblems.stale.map(({ source, lastStartedAt }) => (
+              <div key={source}>{source}: not checked since {formatCheckDate(lastStartedAt)}</div>
+            ))}
           </div>
         )}
         <h2>Saved jobs</h2>
@@ -65,4 +70,9 @@ export default async function HomePage() {
       </main>
     </>
   );
+}
+
+/** "Nov 21": the day a source was last checked, in UTC like the daily cron. */
+function formatCheckDate(date: Date) {
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }

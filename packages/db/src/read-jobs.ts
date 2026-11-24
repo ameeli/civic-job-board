@@ -9,7 +9,6 @@ export function readJobs(db: Db) {
     applyUrl: jobs.applyUrl, postedAt: jobs.postedAt,
     roleTags: jobs.roleTags, sectorTags: jobs.sectorTags, seniority: jobs.seniority, summary: jobs.summary,
     sources: sql<string[]>`array_agg(distinct ${jobListings.source} order by ${jobListings.source})`,
-    // Only a job with no apply link links to its listing, and such a job has one listing.
     sourceUrl: sql<string>`min(${jobListings.sourceUrl})`,
   }).from(jobs).innerJoin(jobListings, eq(jobListings.jobId, jobs.id)).groupBy(jobs.id)
     .orderBy(sql`${jobs.postedAt} desc nulls last`, jobs.id);

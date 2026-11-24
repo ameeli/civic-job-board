@@ -15,10 +15,14 @@ employer (or "Employer not listed"), location and posted date when available, an
 list it ("via" one, "also on" the others). Tagged jobs also show their seniority,
 role and sector tags, omitting `unknown`, and a one-line summary when available.
 Clicking a card opens the job's detail sheet from the right (addressable as
-`/?job=<id>`, so it survives reload and the back button closes it): title,
+`/?job=<id>`, so it survives reload; after opening from the inbox, Back closes it): title,
 employer, location, salary, an Apply link (the application link when present,
 otherwise the source listing), and a Role tab with the summary, tags, sources,
-posted date, and the full description. With no saved jobs, it prompts you to run the daily check. When Civic
+posted date, and an expandable full description, when available. Close or a click
+outside the sheet returns to the list. While it is open, keyboard focus stays in
+the sheet; closing returns focus to the opening title when possible. An unknown
+or malformed job ID shows “Job not found” with the same close control.
+With no saved jobs, it prompts you to run the daily check. When Civic
 Tech Field Guide jobs are listed, a line credits the Field Guide under its CC BY
 4.0 license. Read state, starring, archiving, filters, and the other detail tabs
 are not built yet; the [design reference](docs/design/README.md) shows the planned screens.

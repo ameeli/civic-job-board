@@ -194,10 +194,12 @@ source's run row fails, that fetch answers HTTP 500. The local curl
 commands above run these same functions. Other sources come in later slices.
 
 - **Tech Jobs for Gov** (`tech-jobs-for-gov`): its WordPress API, all pages.
-  Employer, location, and salary are kept as supplied by the API; salary is not
-  parsed or converted. Posted dates use the API's UTC timestamp and deadlines
-  retain the board's date text. An apply link comes from `meta._application`,
-  with HTML entities decoded, or is null when absent.
+  Employer, location, and salary come from `meta._company_name`,
+  `meta._job_location`, and `meta._job_salary` and are kept as supplied, or null
+  when absent or empty; salary is not parsed or converted. Posted dates use the
+  API's UTC timestamp. Deadlines are null because the API no longer publishes
+  them. An apply link comes from `meta._application`, with HTML entities decoded,
+  or is null when absent or empty.
 - **Civic Tech Field Guide** (`civic-tech-field-guide`): the newest 100 items
   of its official jobs feed as JSON
   (`https://civictech.guide/api/v1/feed.json?kind=jobs&limit=100`), the same

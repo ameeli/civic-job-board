@@ -17,6 +17,13 @@ Tech Field Guide jobs are listed, a line credits the Field Guide under its CC BY
 4.0 license. Other sources and the full inbox UI are not built yet; the
 [design reference](docs/design/README.md) shows the planned screens.
 
+Above the saved-jobs list, a banner names job sources whose latest recorded
+check failed, including checks that returned no listings. If that check started
+more than 36 hours ago, the source instead appears as "not checked since" its
+last check's UTC date, regardless of that check's result. A fresh successful
+check removes that source from the banner. Sources with no recorded checks and
+Gemini tagging failures are not included.
+
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).
 
 ## Stack and why

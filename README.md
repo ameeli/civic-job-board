@@ -14,8 +14,8 @@ jobs also show their role, sector, and seniority tags and a one-line summary.
 Titles link to the application link when present, otherwise to the source
 listing. With no saved jobs, it prompts you to run the daily check. When Civic
 Tech Field Guide jobs are listed, a line credits the Field Guide under its CC BY
-4.0 license. Other sources and the full inbox UI are not built yet; screens and
-visual design are being prototyped separately.
+4.0 license. Other sources and the full inbox UI are not built yet; the
+[design reference](docs/design/README.md) shows the planned screens.
 
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).
 

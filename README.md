@@ -5,21 +5,20 @@ Unified inbox-style job board for civic tech and tech-for-good roles.
 A personal, single-user app that checks civic job boards and newsletters once a
 day and merges the jobs it finds into one email-style inbox.
 
-This repository is currently a **skeleton**: it deploys, has Google sign-in
+This repository is currently an **early version**: it deploys, has Google sign-in
 locked to the owner's account, saves Tech Jobs for Gov, Civic Tech Field
 Guide (its job board and its Field Guide Friday newsletter), Diversify Tech, free Tech Jobs for Good, DSCovery, and Diversify Tech newsletter listings on a daily check, tags each new job once with Gemini, and has CI.
 After sign-in, the home page is the read-only "Commons" inbox: today's date in
 the reader's time zone, the job count, and one card per saved job, ordered by
 posted date, newest first, with undated jobs last. A card shows the title,
-employer (or "Employer
-not listed"), location and posted date when available, and the sources that
+employer (or "Employer not listed"), location and posted date when available, and the sources that
 list it ("via" one, "also on" the others). Tagged jobs also show their seniority,
 role and sector tags, omitting `unknown`, and a one-line summary when available.
 A card links to the application link when present, otherwise to the
 source listing. With no saved jobs, it prompts you to run the daily check. When
 Civic Tech Field Guide jobs are listed, a line credits the Field Guide under its
 CC BY 4.0 license. Read state, starring, archiving, filters, and job details are
-not built yet.
+not built yet; the [design reference](docs/design/README.md) shows the planned screens.
 
 Above the inbox cards, a banner names job sources whose latest recorded
 check failed, including checks that returned no listings. If that check started

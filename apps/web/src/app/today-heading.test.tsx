@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, assert, expect, it, vi } from "vitest";
 import { TodayHeading } from "./today-heading";
 
 vi.mock("react", () => ({ useSyncExternalStore: vi.fn() }));
@@ -15,7 +15,9 @@ function mountHeading() {
   vi.stubGlobal("document", document);
   vi.mocked(useSyncExternalStore).mockImplementation((_, snapshot) => snapshot());
   TodayHeading();
-  const [subscribe, , serverSnapshot] = vi.mocked(useSyncExternalStore).mock.calls[0];
+  const hookCall = vi.mocked(useSyncExternalStore).mock.calls[0];
+  assert(hookCall, "TodayHeading must call useSyncExternalStore");
+  const [subscribe, , serverSnapshot] = hookCall;
   const onChange = vi.fn(() => TodayHeading());
   const unsubscribe = subscribe(onChange);
   return { document, onChange, unsubscribe, serverSnapshot };

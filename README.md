@@ -18,9 +18,10 @@ Tech Field Guide jobs are listed, a line credits the Field Guide under its CC BY
 visual design are being prototyped separately.
 
 Above the saved-jobs list, a banner names job sources whose latest recorded
-check failed, including checks that returned no listings, and sources not
-checked in the last 36 hours, with the date of their last check. A later
-successful check removes that source from the banner. Sources with no recorded checks and
+check failed, including checks that returned no listings. If that check started
+more than 36 hours ago, the source instead appears as "not checked since" its
+last check's UTC date, regardless of that check's result. A fresh successful
+check removes that source from the banner. Sources with no recorded checks and
 Gemini tagging failures are not included.
 
 To put it online, follow [`docs/deploy.md`](docs/deploy.md).

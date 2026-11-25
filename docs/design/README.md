@@ -17,8 +17,9 @@ the app. The screenshots below show it with fictional sample data.
 - **No keyboard shortcuts** in v1.
 - **Intro drafts are generic** in v1. A LinkedIn "alumni of your school" link
   and its "your school" setting come later.
-- **Phone and tablet layouts** are a separate design pass; these screens are
-  desktop only.
+- **Responsive layouts:** build desktop first, keeping the app fully usable on
+  phones without overflow. These prototype screenshots are desktop only;
+  dedicated phone and tablet designs are a separate design pass.
 
 ## Screens
 

@@ -1,12 +1,14 @@
 import { CTFG_SOURCE } from "@civic-job-board/core/civic-tech-field-guide";
-import { describeJobTags } from "@civic-job-board/core/job-tags";
 import { readJobs, readSourceProblems } from "@civic-job-board/db";
 import { getDb } from "@/lib/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAllowedSession } from "@/lib/auth";
 import { JOB_SOURCES } from "@/lib/daily-check";
+import { sourceName } from "@/lib/job-display";
 import { signOut } from "./actions";
+import { JobCard } from "./job-card";
+import { TodayHeading } from "./today-heading";
 
 export default async function HomePage() {
   // The proxy already requires a session; this keeps the page safe on its own.
@@ -33,36 +35,30 @@ export default async function HomePage() {
           </form>
         </div>
       </header>
-      <main className="home">
+      <main className="inbox">
+        <div className="inbox-header">
+          <TodayHeading />
+          <p className="inbox-count">{jobs.length} {jobs.length === 1 ? "job" : "jobs"}</p>
+        </div>
         {(sourceProblems.failed.length > 0 || sourceProblems.stale.length > 0) && (
-          <div className="alert" role="status">
+          <div className="source-banner" role="status">
             {sourceProblems.failed.length > 0 && (
-              <div>Last daily check failed or found nothing for: {sourceProblems.failed.join(", ")}</div>
+              <div>Last daily check failed or found nothing for: {sourceProblems.failed.map(sourceName).join(", ")}</div>
             )}
             {sourceProblems.stale.map(({ source, lastStartedAt }) => (
-              <div key={source}>{source}: not checked since {formatCheckDate(lastStartedAt)}</div>
+              <div key={source}>{sourceName(source)}: not checked since <span className="nowrap">{formatCheckDate(lastStartedAt)}</span></div>
             ))}
           </div>
         )}
-        <h2>Saved jobs</h2>
         {jobs.length ? (
-          <ul>
-            {jobs.map((job) => (
-              <li key={job.id}>
-                <a href={job.applyUrl || job.sourceUrl}>{job.title}</a>
-                <p>{job.employerName} · {job.sources.join(", ")}</p>
-                {job.roleTags && job.sectorTags && job.seniority && (
-                  <p>{describeJobTags({ roleTags: job.roleTags, sectorTags: job.sectorTags, seniority: job.seniority })}</p>
-                )}
-                {job.summary && <p>{job.summary}</p>}
-              </li>
-            ))}
-          </ul>
+          <div className="job-cards">
+            {jobs.map(job => <JobCard key={job.id} job={job} />)}
+          </div>
         ) : (
-          <p>No jobs saved yet - run the daily check</p>
+          <p className="inbox-empty">No jobs saved yet - run the daily check</p>
         )}
         {jobs.some((job) => job.sources.includes(CTFG_SOURCE)) && (
-          <p>
+          <p className="inbox-credit">
             Jobs from the <a href="https://civictech.guide">Civic Tech Field Guide</a> are shared under{" "}
             <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
           </p>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildTaggingRequest, describeJobTags, readTaggingAnswer, ROLE_TAGS, SECTOR_TAGS, SENIORITY_LEVELS,
+  buildTaggingRequest, jobTagLabels, readTaggingAnswer, ROLE_TAGS, SECTOR_TAGS, SENIORITY_LEVELS,
 } from "./job-tags";
 
 const geminiResponse = (text: string) => ({ candidates: [{ content: { parts: [{ text }] }, finishReason: "STOP" }] });
@@ -67,7 +67,14 @@ describe("readTaggingAnswer", () => {
   });
 });
 
-it("describes tags with their labels", () => {
-  expect(describeJobTags({ roleTags: ["data-science-ai", "unknown"], sectorTags: ["finance-revenue"], seniority: "leadership" }))
-    .toBe("Roles: Data science & AI, Unknown · Sectors: Finance & revenue · Seniority: Leadership");
+describe("jobTagLabels", () => {
+  it("labels each tag", () => {
+    expect(jobTagLabels({ roleTags: ["data-science-ai", "security"], sectorTags: ["finance-revenue"], seniority: "leadership" }))
+      .toEqual({ roles: ["Data science & AI", "Security"], sectors: ["Finance & revenue"], seniority: "Leadership" });
+  });
+
+  it("leaves out unknown tags", () => {
+    expect(jobTagLabels({ roleTags: ["unknown"], sectorTags: ["education", "unknown"], seniority: "unknown" }))
+      .toEqual({ roles: [], sectors: ["Education"], seniority: null });
+  });
 });

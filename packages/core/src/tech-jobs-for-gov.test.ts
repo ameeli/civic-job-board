@@ -2,34 +2,38 @@ import { describe, expect, it, vi } from "vitest";
 import record from "./fixtures/gov-listing.json";
 import { fetchGovRecords, mapGovListing } from "./tech-jobs-for-gov";
 
-// Live API capture, 2026-10-28: unrelated fields removed, description kept to its first paragraph.
+// Live API capture, 2026-11-23: unrelated fields removed, description kept to its first paragraph.
 describe("Tech Jobs for Gov", () => {
   it("maps board text without salary or location normalization", () => {
     const job = mapGovListing(record);
     expect(job).toMatchObject({
-      source: "tech-jobs-for-gov", sourceJobId: "4296",
-      title: "Senior DevOps Engineer",
-      employerName: "State of Louisiana, Division of Administration-Office of Technology Services",
-      salary: "126252", location: "Baton Rouge, LA",
-      applyUrl: "https://www.governmentjobs.com/careers/louisiana/jobs/5526277",
-      sourceUrl: record.link, deadline: "2026-11-06",
-      postedAt: new Date("2026-10-27T23:31:22Z"),
+      source: "tech-jobs-for-gov", sourceJobId: "4798",
+      title: "Manager of Web and Digital Strategy",
+      employerName: "City of Tuscaloosa",
+      salary: "108461.18", location: "Tuscaloosa, AL",
+      applyUrl: "https://www.governmentjobs.com/careers/tuscaloosa/jobs/5540003",
+      sourceUrl: record.link, deadline: null,
+      postedAt: new Date("2026-11-20T21:24:02Z"),
     });
-    expect(job.description).toContain("Architecture, Standards & Platform");
+    expect(job.description).toContain("City of Tuscaloosa's home page");
     expect(job.description).not.toContain("<p>");
   });
 
   it("decodes HTML entities in API application links", () => {
     const job = mapGovListing({ ...record, meta: {
-      _application: "https://example.org/?UniqueId=101&amp;CommunityJobs=False&amp;JobID=Data-Analyst-8",
+      ...record.meta, _application: "https://example.org/?UniqueId=101&amp;CommunityJobs=False&amp;JobID=Data-Analyst-8",
     } });
     expect(job.applyUrl).toBe("https://example.org/?UniqueId=101&CommunityJobs=False&JobID=Data-Analyst-8");
     expect(new URL(job.applyUrl!).searchParams.get("JobID")).toBe("Data-Analyst-8");
   });
 
-  it("maps absent or empty API application links to null", () => {
-    expect(mapGovListing({ ...record, meta: {} }).applyUrl).toBeNull();
-    expect(mapGovListing({ ...record, meta: { _application: "" } }).applyUrl).toBeNull();
+  it("maps absent or empty API meta fields to null", () => {
+    expect(mapGovListing({ ...record, meta: {} })).toMatchObject({
+      employerName: null, location: null, salary: null, applyUrl: null,
+    });
+    expect(mapGovListing({ ...record, meta: {
+      _company_name: "", _job_location: "", _job_salary: "", _application: "",
+    } })).toMatchObject({ employerName: null, location: null, salary: null, applyUrl: null });
   });
 
   it("handles absent optional data and decodes rendered HTML", () => {
@@ -45,7 +49,7 @@ describe("Tech Jobs for Gov", () => {
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json([record], {
       headers: { "x-wp-totalpages": "2" },
     })).mockResolvedValueOnce(Response.json([{ ...record, id: 2 }]));
-    expect((await fetchGovRecords(fetcher)).map(job => job.id)).toEqual([4296, 2]);
+    expect((await fetchGovRecords(fetcher)).map(job => job.id)).toEqual([4798, 2]);
     expect(fetcher.mock.calls[1]?.[0]).toContain("page=2");
   });
 

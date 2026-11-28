@@ -20,5 +20,5 @@ export {
 } from "./source-runs";
 export { findUserById } from "./users";
 export { saveListing, type JobListing } from "./save-listing";
-export { readJobs } from "./read-jobs";
+export { readJob, readJobs } from "./read-jobs";
 export { readJobsToTag, saveJobTags } from "./job-tags";

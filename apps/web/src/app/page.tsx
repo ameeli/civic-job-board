@@ -1,5 +1,5 @@
 import { CTFG_SOURCE } from "@civic-job-board/core/civic-tech-field-guide";
-import { readJobs, readSourceProblems } from "@civic-job-board/db";
+import { readJob, readJobs, readSourceProblems } from "@civic-job-board/db";
 import { getDb } from "@/lib/db";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -9,16 +9,23 @@ import { sourceName } from "@/lib/job-display";
 import { signOut } from "./actions";
 import { JobCard } from "./job-card";
 import { TodayHeading } from "./today-heading";
+import { JobDetailSheet } from "./job-detail-sheet";
 
-export default async function HomePage() {
+/** The saved jobs; `?job=<id>` also opens that job's detail sheet. */
+export default async function HomePage({ searchParams }: PageProps<"/">) {
   // The proxy already requires a session; this keeps the page safe on its own.
   const session = await getAllowedSession(await headers());
   if (!session) {
     redirect("/sign-in");
   }
 
+  const { job: openJobId } = await searchParams;
   const db = getDb();
-  const [jobs, sourceProblems] = await Promise.all([readJobs(db), readSourceProblems(db, JOB_SOURCES, new Date())]);
+  const [jobs, openJob, sourceProblems] = await Promise.all([
+    readJobs(db),
+    typeof openJobId === "string" ? readJob(db, openJobId) : undefined,
+    readSourceProblems(db, JOB_SOURCES, new Date()),
+  ]);
 
   return (
     <>
@@ -64,6 +71,7 @@ export default async function HomePage() {
           </p>
         )}
       </main>
+      {openJob !== undefined && <JobDetailSheet job={openJob} openerId={`job-${openJobId}`} />}
     </>
   );
 }

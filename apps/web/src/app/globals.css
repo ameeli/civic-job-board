@@ -65,6 +65,10 @@ p {
   text-wrap: pretty;
 }
 
+a {
+  color: var(--accent);
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -75,6 +79,7 @@ p {
   border-radius: 999px;
   font: inherit;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
   transition: background-color 120ms ease;
 }
@@ -395,6 +400,154 @@ p {
   color: var(--ink-faint);
 }
 
+/* Job detail sheet: slides in from the right over the home page */
+
+.sheet::backdrop {
+  background: rgb(40 33 20 / 0.3);
+}
+
+.sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  flex-direction: column;
+  width: min(800px, calc(100% - 56px));
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--surface);
+  border: 0;
+  border-left: 1px solid var(--line);
+  box-shadow: -24px 0 64px rgb(var(--shadow-color) / 0.2);
+  animation: sheet-slide-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sheet[open] {
+  display: flex;
+}
+
+@keyframes sheet-slide-in {
+  from {
+    transform: translateX(48px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}
+
+.sheet-bar {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 44px 44px;
+}
+
+.sheet-head {
+  display: grid;
+  gap: 10px;
+  padding: 30px 0 24px;
+}
+
+.sheet-head h2 {
+  font-size: 2rem;
+}
+
+.sheet-employer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 650;
+}
+
+.sheet-muted {
+  color: var(--ink-muted);
+}
+
+.sheet-apply {
+  justify-self: start;
+  margin-top: 12px;
+}
+
+.sheet-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-tab {
+  margin: 0;
+  padding: 12px 14px;
+  border-bottom: 2px solid var(--accent);
+  margin-bottom: -1px;
+  color: var(--accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.sheet-panel {
+  display: grid;
+  gap: 20px;
+  padding-top: 22px;
+}
+
+.sheet-summary {
+  font-family: var(--font-heading);
+  font-size: 1.1875rem;
+  line-height: 1.42;
+}
+
+.sheet-facts {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.sheet-facts dt {
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.sheet-facts dd {
+  margin: 0;
+}
+
+.sheet-description {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.sheet-description summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sheet-description p {
+  margin-top: 12px;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
 @media (max-width: 480px) {
   .sign-in-card {
     padding: 28px 20px;
@@ -412,5 +565,27 @@ p {
 
   .job-card {
     padding: 16px 16px 10px;
+  }
+
+  .sheet {
+    width: 100%;
+    border-left: 0;
+  }
+
+  .sheet-body {
+    padding: 0 16px 32px;
+  }
+
+  .sheet-head h2 {
+    font-size: 1.625rem;
+  }
+
+  .sheet-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .sheet-facts dd + dt {
+    margin-top: 8px;
   }
 }

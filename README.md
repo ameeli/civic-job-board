@@ -14,11 +14,18 @@ posted date, newest first, with undated jobs last. A card shows the title,
 employer (or "Employer not listed"), location and posted date when available, and the sources that
 list it ("via" one, "also on" the others). Tagged jobs also show their seniority,
 role and sector tags, omitting `unknown`, and a one-line summary when available.
-A card links to the application link when present, otherwise to the
-source listing. With no saved jobs, it prompts you to run the daily check. When
-Civic Tech Field Guide jobs are listed, a line credits the Field Guide under its
-CC BY 4.0 license. Read state, starring, archiving, filters, and job details are
-not built yet; the [design reference](docs/design/README.md) shows the planned screens.
+Clicking a card opens the job's detail sheet from the right (addressable as
+`/?job=<id>`, so it survives reload; after opening from the inbox, Back closes it): title,
+employer, location, salary, an Apply link (the application link when present,
+otherwise the source listing), and a Role tab with the summary, tags, sources,
+posted date, and an expandable full description, when available. Close or a click
+outside the sheet returns to the list. While it is open, keyboard focus stays in
+the sheet; closing returns focus to the opening title when possible. An unknown
+or malformed job ID shows “Job not found” with the same close control.
+With no saved jobs, it prompts you to run the daily check. When Civic
+Tech Field Guide jobs are listed, a line credits the Field Guide under its CC BY
+4.0 license. Read state, starring, archiving, filters, and the other detail tabs
+are not built yet; the [design reference](docs/design/README.md) shows the planned screens.
 
 Above the inbox cards, a banner names job sources whose latest recorded
 check failed, including checks that returned no listings. If that check started
@@ -47,7 +54,7 @@ used. GitHub Actions only runs CI.
 ### Repository layout
 
 ```
-apps/web/        Next.js app deployed to Vercel (sign-in, job inbox, daily cron routes)
+apps/web/        Next.js app deployed to Vercel (sign-in, job inbox, job detail sheet, daily cron routes)
 packages/core/   Source adapters, pure job mapping, job tag lists, and shared auth checks
 packages/db/     Drizzle schema, SQL migrations, and database helpers
 apps-script/     Placeholder for the future Gmail forwarding script

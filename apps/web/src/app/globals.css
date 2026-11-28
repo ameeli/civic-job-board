@@ -423,7 +423,7 @@ a {
   background: var(--surface);
   border: 0;
   border-left: 1px solid var(--line);
-  box-shadow: -24px 0 64px rgb(60 45 20 / 0.2);
+  box-shadow: -24px 0 64px rgb(var(--shadow-color) / 0.2);
   animation: sheet-slide-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -471,7 +471,10 @@ a {
 }
 
 .sheet-employer {
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 650;
 }
 
 .sheet-muted {

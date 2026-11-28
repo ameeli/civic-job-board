@@ -1,11 +1,10 @@
 import { jobTagLabels } from "@civic-job-board/core/job-tags";
 import type { readJob } from "@civic-job-board/db";
 import Link from "next/link";
+import { employerInitials, formatPostedDate, sourceName } from "@/lib/job-display";
 import { SheetDialog } from "./sheet-dialog";
 
 type Job = NonNullable<Awaited<ReturnType<typeof readJob>>>;
-
-const postedDate = new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeZone: "UTC" });
 
 /** The job detail sheet over the home page; null `job` shows a not-found state. */
 export function JobDetailSheet({ job, openerId }: { job: Job | null; openerId: string }) {
@@ -39,7 +38,12 @@ function JobDetail({ job }: { job: Job }) {
   return (
     <>
       <header className="sheet-head">
-        {job.employerName && <p className="sheet-employer">{job.employerName}</p>}
+        {job.employerName && (
+          <p className="sheet-employer">
+            <span className="employer-badge" aria-hidden="true">{employerInitials(job.employerName)}</span>
+            {job.employerName}
+          </p>
+        )}
         <h2 id="sheet-title">{job.title}</h2>
         {(job.location || job.salary) && (
           <p className="sheet-muted">{[job.location, job.salary].filter(Boolean).join(" · ")}</p>
@@ -72,14 +76,14 @@ function JobDetail({ job }: { job: Job }) {
             {job.listings.map((listing, index) => (
               <span key={listing.source}>
                 {index > 0 && ", "}
-                <a href={listing.sourceUrl} target="_blank" rel="noreferrer">{listing.source}</a>
+                <a href={listing.sourceUrl} target="_blank" rel="noreferrer">{sourceName(listing.source)}</a>
               </span>
             ))}
           </dd>
           {job.postedAt && (
             <>
               <dt>Posted</dt>
-              <dd>{postedDate.format(job.postedAt)}</dd>
+              <dd>{formatPostedDate(job.postedAt)}</dd>
             </>
           )}
         </dl>
